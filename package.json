@@ -1,6 +1,6 @@
 {
   "name": "discord-music-bot",
-  "version": "4.0.4",
+  "version": "4.1.1",
   "description": "Simple Music Bot for Discord without any database",
   "private": true,
   "engines": {
@@ -51,7 +51,7 @@
     "@types/follow-redirects": "^1.14.1",
     "@types/html-to-text": "^9.0.0",
     "@types/mocha": "^10.0.1",
-    "@types/node": "^20.1.5",
+    "@types/node": "^20.1.7",
     "@types/throttle-debounce": "^5.0.0",
     "@types/ws": "^8.5.4",
     "@typescript-eslint/eslint-plugin": "^5.59.6",
