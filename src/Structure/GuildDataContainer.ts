@@ -27,14 +27,13 @@ import type { CommandMessage } from "../Component/commandResolver/CommandMessage
 import type { MusicBotBase } from "../botBase";
 import type { VoiceConnection } from "@discordjs/voice";
 import type { i18n } from "i18next";
-import type { AnyGuildTextChannel, Message, StageChannel, VoiceChannel } from "oceanic.js";
+import type { AnyTextableGuildChannel, Message, StageChannel, VoiceChannel } from "oceanic.js";
 import type { TextChannel } from "oceanic.js";
 import type { Playlist } from "spotify-url-info";
 
+import { entersState, VoiceConnectionStatus } from "@discordjs/voice";
 import { LockObj, lock } from "@mtripg6666tdr/async-lock";
 import { MessageEmbedBuilder } from "@mtripg6666tdr/oceanic-command-resolver/helper";
-
-import { entersState, VoiceConnectionStatus } from "@discordjs/voice";
 import Soundcloud from "soundcloud.ts";
 import ytpl from "ytpl";
 
@@ -763,7 +762,7 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
 
   async playFromMessage(
     commandMessage: CommandMessage,
-    message: Message<AnyGuildTextChannel>,
+    message: Message<AnyTextableGuildChannel>,
     context: CommandArgs,
     morePrefs: { first?: boolean, cancellable?: boolean },
     t: i18n["t"],
@@ -850,7 +849,7 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
    * プレフィックス更新します
    * @param message 更新元となるメッセージ
    */
-  updatePrefix(message: CommandMessage|Message<AnyGuildTextChannel>){
+  updatePrefix(message: CommandMessage|Message<AnyTextableGuildChannel>){
     const oldPrefix = this.prefix;
     const member = message.guild.members.get(this.bot.client.user.id);
     const pmatch = (member.nick || member.username).match(/^(\[(?<prefix0>[a-zA-Z!?_-]+)\]|【(?<prefix1>[a-zA-Z!?_-]+)】)/);
