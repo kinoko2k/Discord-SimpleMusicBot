@@ -1,8 +1,9 @@
 // @ts-check
 // Note: type annotations allow type checking and IDEs autocompletion
 
-const lightCodeTheme = require('prism-react-renderer/themes/github');
-const darkCodeTheme = require('prism-react-renderer/themes/dracula');
+const { themes } = require("prism-react-renderer");
+const lightCodeTheme = themes.github;
+const darkCodeTheme = themes.dracula;
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -43,6 +44,20 @@ const config = {
             }
             return `https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/edit/master/docs/${context.versionDocsDirPath}/${context.docPath}`
           },
+          rehypePlugins: [
+            () => {
+              return async (tree, file) => {
+                const { visit } = await import("unist-util-visit");
+                visit(tree, "element", node => {
+                  if(node.tagName === "section" && node.properties.dataFootnotes){
+                    const txt = node.children[0].children[0];
+                    if(txt.value !== "Footnotes") throw new Error(`Unexpected text: ${txt.value}`);
+                    txt.value = "脚注"
+                  }
+                })
+              }
+            }
+          ]
         },
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
@@ -112,7 +127,7 @@ const config = {
             items: [
               {
                 label: 'Discord',
-                href: 'https://discord.com/invite/7DrAEXBMHe',
+                href: 'https://sr.usamyon.moe/8QZw',
               },
             ],
           },

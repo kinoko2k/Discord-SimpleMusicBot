@@ -16,14 +16,13 @@
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
-import type { AudioEffect } from "./AudioEffect";
 import type { CommandArgs } from "./Command";
 import type { QueueContent } from "./QueueContent";
 import type { YmxFormat } from "./YmxFormat";
 import type { exportableCustom, exportableSpotify } from "../AudioSource";
-import type { SearchPanel } from "../Component/SearchPanel";
 import type { exportableStatuses } from "../Component/backupper";
 import type { CommandMessage } from "../Component/commandResolver/CommandMessage";
+import type { SearchPanel } from "../Component/searchPanel";
 import type { MusicBotBase } from "../botBase";
 import type { VoiceConnection } from "@discordjs/voice";
 import type { i18n } from "i18next";
@@ -41,11 +40,12 @@ import { LogEmitter } from "./LogEmitter";
 import { YmxVersion } from "./YmxFormat";
 import { Spotify } from "../AudioSource";
 import { SoundCloudS } from "../AudioSource";
-import { PlayManager } from "../Component/PlayManager";
-import { QueueManager } from "../Component/QueueManager";
-import { SearchPanelManager } from "../Component/SearchPanelManager";
-import { SkipManager } from "../Component/SkipManager";
-import { TaskCancellationManager } from "../Component/TaskCancellationManager";
+import { AudioEffectManager } from "../Component/audioEffectManager";
+import { PlayManager } from "../Component/playManager";
+import { QueueManager } from "../Component/queueManager";
+import { SearchPanelManager } from "../Component/searchPanelManager";
+import { SkipSession } from "../Component/skipSession";
+import { TaskCancellationManager } from "../Component/taskCancellationManager";
 import * as Util from "../Util";
 import { useConfig } from "../config";
 import { discordLanguages } from "../i18n";
@@ -69,26 +69,36 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
   /** プレフィックス */
   prefix: string;
 
+  // キューマネージャー
   protected _queue: QueueManager;
   /** キューマネジャ */
   get queue(){
     return this._queue;
   }
 
+  // プレーマネージャー
   protected _player: PlayManager;
   /** 再生マネジャ */
   get player(){
     return this._player;
   }
 
+  // 検索パネルマネージャー
   protected _searchPanel: SearchPanelManager;
-  /** 検索窓の格納します */
+  /** 検索パネルマネジャ */
   get searchPanel(){
     return this._searchPanel;
   }
 
-  protected _skipSession: SkipManager;
-  /** Skipマネージャ */
+  protected _audioEffects: AudioEffectManager;
+  /** オーディオエフェクトマネジャ */
+  get audioEffects(){
+    return this._audioEffects;
+  }
+
+  // スキップセッション
+  protected _skipSession: SkipSession = null;
+  /** スキップマネージャ */
   get skipSession(){
     return this._skipSession;
   }
@@ -105,8 +115,6 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
 
   /** メインボット */
   readonly bot: MusicBotBase;
-  /** オーディオエフェクトエフェクトの設定 */
-  readonly effectPrefs: AudioEffect;
   /** 関連動画自動追加が有効 */
   addRelated: boolean;
   /** 均等再生が有効 */
@@ -141,21 +149,17 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
     }
     this.boundTextChannel = boundchannelid;
     if(!this.boundTextChannel){
-      throw new Error("invalid bound textchannel id was given");
+      throw new Error("Invalid bound textchannel id was given");
     }
     this.bot = bot;
     this.addRelated = false;
-    this.effectPrefs = {
-      BassBoost: false,
-      Reverb: false,
-      LoudnessEqualization: false,
-    };
     this.prefix = ">";
     this.equallyPlayback = false;
     this.connection = null;
     this.initPlayManager();
     this.initQueueManager();
     this.initSearchPanelManager();
+    this.initAudioEffectManager();
   }
 
   // 子クラスでオーバーライドされる可能性があるので必要
@@ -163,14 +167,19 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
     this._player = new PlayManager(this);
   }
 
-  // 子クラスでオーバーライドされる可能性があるので必要
+  // 同上
   protected initQueueManager(){
     this._queue = new QueueManager(this);
   }
 
-  // 子クラスでオーバーライドされる可能性があるので必要
+  // 同上
   protected initSearchPanelManager(){
     this._searchPanel = new SearchPanelManager(this);
+  }
+
+  // 同上
+  protected initAudioEffectManager(){
+    this._audioEffects = new AudioEffectManager(this);
   }
 
   /**
@@ -522,7 +531,7 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
           message: smsg,
           privateSource,
         });
-        await this.player.play();
+        await this.player.play({ bgm: false });
         return [item];
       }
       catch(e){
@@ -544,7 +553,7 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
         message: await message.reply(t("pleaseWait")),
         privateSource,
       });
-      await this.player.play();
+      await this.player.play({ bgm: false });
       return [item];
     }
 
@@ -616,7 +625,7 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
       finally{
         this.unbindCancellation(cancellation);
       }
-      await this.player.play();
+      await this.player.play({ bgm: false });
       return items;
     }
 
@@ -672,7 +681,7 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
       finally{
         this.unbindCancellation(cancellation);
       }
-      await this.player.play();
+      await this.player.play({ bgm: false });
       return items;
     }
 
@@ -729,7 +738,7 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
       finally{
         this.unbindCancellation(cancellation);
       }
-      await this.player.play();
+      await this.player.play({ bgm: false });
       return items;
     }
 
@@ -746,7 +755,7 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
           privateSource,
         });
         if(success){
-          await this.player.play();
+          await this.player.play({ bgm: false });
         }
         return [success];
       }
@@ -815,11 +824,14 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
    */
   async playFromSearchPanelOptions(nums: string[], panel: SearchPanel, t: i18n["t"]){
     const includingNums = panel.filterOnlyIncludes(nums.map(n => Number(n)).filter(n => !isNaN(n)));
+
     const {
       urls: items,
       responseMessage,
     } = panel.decideItems(includingNums);
+
     const [first, ...rest] = items;
+
     // いっこめをしょり
     await this.queue.addQueue({
       url: first,
@@ -827,15 +839,18 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
       fromSearch: responseMessage,
       cancellable: this.queue.length >= 1,
     });
+
     // 現在の状態を確認してVCに接続中なら接続試行
     if(panel.commandMessage.member.voiceState?.channelID){
       await this.joinVoiceChannel(panel.commandMessage, {}, t);
     }
+
     // 接続中なら再生を開始
     if(this.player.isConnecting && !this.player.isPlaying){
-      await this.player.play();
+      await this.player.play({ bgm: false });
     }
-    // 二個目以上を処理
+
+    // 二個目以降を処理
     for(let i = 0; i < rest.length; i++){
       await this.queue.addQueue({
         url: rest[i],
@@ -870,7 +885,7 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
    * @param message ベースとなるコマンドメッセージ
    */
   async createSkipSession(message: CommandMessage){
-    this._skipSession = new SkipManager(this);
+    this._skipSession = new SkipSession(this);
     await this._skipSession.init(message);
     const destroy = () => {
       this._skipSession?.destroy();

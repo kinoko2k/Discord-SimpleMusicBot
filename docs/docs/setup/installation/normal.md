@@ -90,7 +90,7 @@ npm run start
 なお、スラッシュコマンドは、起動時に自動的に追加されるようになりました。スラッシュコマンドについての詳細は、[あとのページ](../feature/1-slashcommand.md)で解説しています。
 
 ## コードの更新
-:::caution
+:::warning
 
 v3からv4の更新の際に、config.jsonでの設定内容が追加されています。
 追加しないと起動しないようになっていますので、必ずドキュメントサイトや[config.json.sample](https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/blob/master/config.json.sample)を参照の上更新してください。
@@ -116,3 +116,23 @@ npm run onlystart
 npm run start
 ```
 :::
+
+<details>
+  <summary>新しいビルドスクリプトを使用する(ベータ版・v4.3以降)</summary>
+
+v4.3以降では、このページで紹介している`npm run build`によるビルドに加え、
+新しいビルドスクリプトを導入しています。  
+※Dockerイメージのビルド時にはこちらが使用されています。
+
+ベータ版ですが、出力されるファイル数が少なくなり、パフォーマンスが向上するため、
+ぜひお試しください。
+
+新しいビルドスクリプトは、`npm run build`の代わりに、
+```sh
+npm run build:bundled
+```
+を実行することでご利用いただけます。
+
+それ以外の手順やコマンドは同じとなります。
+
+</details>

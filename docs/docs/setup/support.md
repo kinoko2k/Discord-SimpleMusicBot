@@ -10,15 +10,15 @@ sidebar_position: 99
 }
 `}</style>
 
-## バージョン対応/比較表
+## ボットのバージョン対応/比較表
 
 <div class="no-wrap-table">
 
 |バージョン                                                                        |Node.js  |コアライブラリ                                        |リリース  |サポート終了|サポート範囲                      |サポート状況                |
 |:--------------------------------------------------------------------------------|---------|------------------------------------------------------|:--------:|:---------:|:-------------------------------:|:---------------------------|
 |[v1](https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/tree/v1)            |>=12.0.0 |[discord.js](https://discord.js.org/) ^12.0.0         |2021/08/19|2021/08/31 |-                                |:x:サポート終了             |
-|[v2](https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/tree/v2)            |>=16.6.0 |[discord.js](https://discord.js.org/) >13.0.0 <=13.6.0|2021/08/23|2022/12/31 |-                                |:x:サポート終了             |
-|[v3](https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/tree/v3)            |>=12     |[eris](https://abal.moe/Eris/) 0.17.x                 |2022/08/30|2023/08/31 |消極的なバグ修正と依存関係の更新   |:white_check_mark:サポート中|
+|[v2](https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/tree/v2)            |>=16.6.0 |[discord.js](https://discord.js.org/) >13.0.0 \<=13.6.0|2021/08/23|2022/12/31 |-                                |:x:サポート終了             |
+|[v3](https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/tree/v3)            |>=12     |[eris](https://abal.moe/Eris/) 0.17.x                 |2022/08/30|2023/09/30 |-                                |:x:サポート終了             |
 |[v4(master)](https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/tree/master)|>=16.16.0|[oceanic.js](https://oceanic.ws/) ^1.6.0              |2023/04/13|-          |フルサポート                      |:white_check_mark:サポート中|
 
 </div>
@@ -55,4 +55,15 @@ sidebar_position: 99
 メジャーリリースは**後方互換性がありません**。
 必ず、リリースノートをご参照の上、内容によっては`.env`、`config.json`の更新、およびNode.jsの更新などを行っていただく必要があります。
 
+## Node.jsのバージョンによる機能の違い
+最新版のボットをお使いでも、Node.jsのバージョンにより一部機能が利用できない場合があります。
+
+|Node.jsのバージョン|[MongoDBによるバックアップ](./backup/mongo.md)|YouTubeの検索           |SpotifyのURLの再生       |
+|------------------|---------------------------------------------|------------------------|------------------------|
+|v16.x             |△[^1]                                       |:o:[^2]                 |△[^1]                  |
+|v18.x             |:white_check_mark:                           |:white_check_mark:      |:white_check_mark:      |
+|v20.x             |:white_check_mark:                           |:white_check_mark:      |:white_check_mark:      |
+
+[^1]: v16の最新版であれば機能するはずですが、v16.xの古いバージョンでは機能しない可能性があります。
+[^2]: 検索に失敗することが増える可能性があります。
 

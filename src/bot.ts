@@ -20,6 +20,8 @@ import type { CommandArgs } from "./Structure";
 
 import * as discord from "oceanic.js";
 
+import { Telemetry } from "./Component/telemetry";
+import { requireIfAny } from "./Util";
 import { MusicBotBase } from "./botBase";
 import { useConfig } from "./config";
 import * as eventHandlers from "./events";
@@ -39,6 +41,12 @@ export class MusicBot extends MusicBotBase {
     return this._isReadyFinished;
   }
 
+  private readonly _telemetry: Telemetry = null;
+
+  get telemetry(){
+    return this._telemetry;
+  }
+
   constructor(token: string, maintenance: boolean = false){
     super(maintenance);
 
@@ -55,16 +63,11 @@ export class MusicBot extends MusicBotBase {
           "GUILD_VOICE_STATES",
           "MESSAGE_CONTENT",
         ],
-        compress: (() => {
-          try{
-            return !!require("zlib-sync");
-          }
-          catch{
-            return false;
-          }
-        })(),
+        compress: !!(requireIfAny("zlib-sync") || requireIfAny("pako")),
       },
     });
+
+    this._telemetry = process.env.DISABLE_TELEMETRY ? null : new Telemetry(this);
 
     this.client.once("ready", eventHandlers.onReady.bind(this));
     this.once("ready", () => {

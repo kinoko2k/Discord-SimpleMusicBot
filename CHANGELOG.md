@@ -1,66 +1,55 @@
-# v4.1.0
+# v4.2.0
 ## 機能追加
-* Spotifyの短縮リンクを処理できるようになりました(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1569, https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1609)
-* カスタムストリームでflacファイルを再生できるようになりました(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1570)
-* 複数台のボット運用時に、別のボットからキューをインポートしたり、埋め込みから再生したりできるようになりました(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1571)
-* 一部のソースのURLを非表示にする機能を追加(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1572)
-* ニコニコ動画の検索機能を追加(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1576, https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1589)
-* スラッシュコマンドから、URL等を公開しないまま楽曲を再生する機能(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1585)
-* ミックスリストを再生できるラジオ機能を追加しました(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1611, https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1633, https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1634
-* メモリキャッシュの最大数を制限しました(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1636)
+* ライブ動画に発行されるURLを解釈できるようになりました(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2032)
+* ドライブのファイルのタイトルが表示されるようになりました(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2062)
+* 音声ファイルのタイトルがメタデータに記録されている場合それを抽出して表示するようになりました(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2127)
+* いくつかの新しい音声エフェクトを追加しました(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2140)
+* DJロールに"DJ"以外の名前が利用できるようになりました(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2147)
+  * [`config.json`の`djRoleNames`](https://web.usamyon.moe/Discord-SimpleMusicBot/docs/setup/installation/configuration#djrolenames-string--null--undefined)で変更が可能です。
+* 利用状況に関するデータを収集するようになりました(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2157)
+  * 詳しくは[ドキュメント](https://sr.usamyon.moe/dsmb-telemetry)を参照してください。
 ## 機能修正/変更
-* `proxy`が非推奨になりました(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1557)
-* エフェクトとボリューム調整が両方オンの時に、呪いのような音声が再生される問題を修正(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1577)
-* ボイスチャンネルのメンバー数を数える際、ボットのアカウントを除外してカウントするように変更(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1579)
-* `バルク削除`コマンドがスラッシュコマンドから利用できるようになりました(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1599)
-## バグ修正
-* 再生に失敗した時の再試行の挙動を修正(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1500)
-* ログで、別のサーバーIDが表示される問題を修正(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1568)
-* 非公開のドライブのファイルを再生しようとしたときに、エラーになるよう修正(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1578)
-* 非同期処理のエラーを正しく補足するように修正(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1581)
-* コマンドの権限が満たしていない場合の挙動を修正(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1586)
+* 音量調整が改善され、音量の数字が実際に聞こえる音の大きさにより近くなりました(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1651)
+* 時間がたって古くなったキャッシュを自動的に無効化するようになりました(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2145)
+  * 旧バージョンよりエラーの発生回数が減ることが見込まれます
+* 特定の条件を満たした際に、スラッシュコマンドを一括上書き更新することで立ち上がるまでの時間を短くしました(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2146)
+<!-- ## バグ修正 -->
 ## ドキュメント
-* インストール方法の順序を、推奨される順番に変更(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1530)
-* ドキュメントの継続的な更新(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1531, https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1630, https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1632, https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1610, https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1640, https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1642)
-* 環境変数`PORT`に関する説明を追加(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1588, https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1637, https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1638)
+* リンク切れを修正(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2090)
+* 音声エフェクトのドキュメントを追加(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2148)
+* Replitのガイドは継続して保守できないと判断し削除(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2166)
+* ドキュメントの継続的な更新(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2126)
 ## 依存関係のアップデート
-* @mtripg6666tdr/oceanic-command-resolver 1.0.0 => 1.1.1
-* @sinclair/typebox 0.28.1 => 0.28.10
-* https-proxy-agent 5.0.1 => 6.1.0
-* spotify-url-info 3.2.3 => 3.2.4
+* @discordjs/voice 0.16.0 => 0.16.1
+* @sinclair/typebox 0.31.17 => 0.31.28
+* candyget 0.5.5 => 0.5.6
+* i18next-fs-backend 2.2.0 => 2.3.1
+* spotify-url-info 3.2.8 => 3.2.10
+### Optional
+* @distube/ytsr 1.2.0 => 2.0.0
+  * このバージョンからオプション(optional)になりました。
+* mongodb 6.1.0 => 6.3.0
+* zlib-sync 0.1.8 => 0.1.9
 ## その他の変更
-* 継続的な翻訳(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1580, https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1584, https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1590, https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1620)
-* TypeScriptの構成を最適化(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1582)
+* ワークフローで使用されるNode.jsのバージョンをv20に更新(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1494)
+* Dockerで使用されるNode.jsのバージョンをv20に更新(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1495)
+* 継続的な翻訳の更新(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2099, https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2122)
+* 内部のユーティリティ関数の改善(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2138)
+* 音声エフェクトの内部構造の改善(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2139)
 
 ### その他の特記事項
-- Dockerのイメージは、リリース後30～40分程度で公開されます。
-- Node.js v20を正式にサポートしました。
+#### 利用状況に関するデータの収集について
+ボットの利用状況に関する匿名の情報と、発生した想定されていないエラーに関するログを自動的に収集するようになりました。
+これらのデータはボットの機能改善に活用されます。
+詳細は、<https://sr.usamyon.moe/dsmb-telemetry>を参照してください。
+#### Node.jsのバージョンについて
+Node.js v16以上の環境で動作することを想定していますが、できれば最新のLTS版を推奨しています。  
+古いバージョンの場合、一部機能が制限されることがあります。詳しくは[こちら](https://web.usamyon.moe/Discord-SimpleMusicBot/docs/next/setup/support#nodejs%E3%81%AE%E3%83%90%E3%83%BC%E3%82%B8%E3%83%A7%E3%83%B3%E3%81%AB%E3%82%88%E3%82%8B%E6%A9%9F%E8%83%BD%E3%81%AE%E9%81%95%E3%81%84)をご覧ください。
+#### Dockerについて
+* Dockerのイメージは、リリース後30～40分程度で公開されます。
+#### 本ボットの開発状況について（再掲）
+* 現在、私(mtripg6666tdr)が非常に忙しく、本ボットの機能強化に時間を割くことができない状態です。現在、多くの機能要望等をいただいておりますが、今しばらくお待ちいただければ幸いです。今後ともよろしくお願いいたします。
+* 引き続きバグ修正は最優先事項として対処していきますので、バグを発見された際はお気軽にissueを開くか、サポートサーバーまでお知らせください。
+* 随時Pull Requestも受け付けております。開発にご協力いただける方は、ぜひともよろしくお願いします。
 
----
-
-# v4.1.1
-## バグ修正
-* `ヘルプ`コマンドにニコニコ動画の検索を追加(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1645)
-* 一部のメッセージベースのコマンドが反応しない問題を修正(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1646)
-
-### その他の特記事項
-- Dockerのイメージは、リリース後30～40分程度で公開されます。
-
----
-
-# v4.1.2
-## バグ修正
-* ボタンを押すとクラッシュする場合がある問題を修正(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1649)
-
-### その他の特記事項
-- Dockerのイメージは、リリース後30～40分程度で公開されます。
-
----
-
-# v4.1.3
-## バグ修正
-* 複数のアイテムをキューに追加する際に発生する可能性のあったエラーを修正(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/1652)
-
-### その他の特記事項
-- Dockerのイメージは、リリース後30～40分程度で公開されます。
 ---
