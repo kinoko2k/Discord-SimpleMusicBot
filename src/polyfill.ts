@@ -16,6 +16,14 @@
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
-import dotenv from "dotenv";
+import { getLogger } from "./logger";
 
-dotenv.config();
+if(typeof global.fetch === "undefined"){
+  const logger = getLogger("Polyfill");
+
+  logger.warn("Native fetch function is not defined.");
+  logger.warn("Installing a fetch polyfill.");
+  logger.warn("We strongly recommend you upgrading Node.js to v18 or higher.");
+
+  global.fetch = require("undici").fetch;
+}

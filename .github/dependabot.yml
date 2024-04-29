@@ -25,7 +25,7 @@ updates:
       - dependency-name: "p-event"
         update-types:
           - "version-update:semver-major"
-      - dependency-name: "i18next"
+      - dependency-name: "undici"
         update-types:
           - "version-update:semver-major"
     groups:
