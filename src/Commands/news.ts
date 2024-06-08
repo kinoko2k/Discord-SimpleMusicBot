@@ -18,16 +18,15 @@
 
 import type { CommandArgs } from ".";
 import type { CommandMessage } from "../Component/commandResolver/CommandMessage";
-import type { i18n } from "i18next";
 
 import { MessageActionRowBuilder, MessageButtonBuilder } from "@mtripg6666tdr/oceanic-command-resolver/helper";
 
 import { BaseCommand } from ".";
 import { Playlist } from "../AudioSource/youtube/playlist";
-import { useConfig } from "../config";
+import { getConfig } from "../config";
 import { DefaultAudioThumbnailURL } from "../definition";
 
-const config = useConfig();
+const config = getConfig();
 
 export default class News extends BaseCommand {
   constructor(){
@@ -40,9 +39,11 @@ export default class News extends BaseCommand {
     });
   }
 
-  async run(message: CommandMessage, context: CommandArgs, t: i18n["t"]){
-    context.server.updateBoundChannel(message);
-    context.server.joinVoiceChannel(message, {}, t).catch(this.logger.error);
+  @BaseCommand.updateBoundChannel
+  async run(message: CommandMessage, context: CommandArgs){
+    const { t } = context;
+
+    context.server.joinVoiceChannel(message, {}).catch(this.logger.error);
     // change news according to locale
     let url: string = null!;
     switch(context.locale){
@@ -122,7 +123,7 @@ export default class News extends BaseCommand {
       }
       return;
     }
-    const searchPanel = context.server.searchPanel.create(message, t("commands:news.newsTopics"), t, true);
+    const searchPanel = context.server.searchPanel.create(message, t("commands:news.newsTopics"), true);
     if(!searchPanel) return;
     await searchPanel.consumeSearchResult(
       Playlist(url, {
@@ -136,7 +137,6 @@ export default class News extends BaseCommand {
         duration: item.durationText,
         description: `${t("length")}: ${item.duration}, ${t("channelName")}: ${item.author}`,
       })),
-      t
     );
   }
 }

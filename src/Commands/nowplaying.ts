@@ -18,7 +18,6 @@
 
 import type { CommandArgs } from ".";
 import type { CommandMessage } from "../Component/commandResolver/CommandMessage";
-import type { i18n } from "i18next";
 
 import { MessageEmbedBuilder } from "@mtripg6666tdr/oceanic-command-resolver/helper";
 
@@ -32,7 +31,7 @@ export default class NowPlaying extends BaseCommand {
       alias: ["今の曲", "nowplaying", "np"],
       unlist: false,
       category: "player",
-      argument: [{
+      args: [{
         type: "bool" as const,
         name: "detailed",
         required: false,
@@ -41,9 +40,11 @@ export default class NowPlaying extends BaseCommand {
       shouldDefer: false,
     });
   }
-  
-  async run(message: CommandMessage, context: CommandArgs, t: i18n["t"]){
-    context.server.updateBoundChannel(message);
+
+  @BaseCommand.updateBoundChannel
+  async run(message: CommandMessage, context: CommandArgs){
+    const { t } = context;
+
     // そもそも再生状態じゃないよ...
     if(!context.server.player.isPlaying){
       message.reply(t("notPlaying")).catch(this.logger.error);
@@ -82,12 +83,7 @@ export default class NowPlaying extends BaseCommand {
             : ` \`${min}:${sec}/${totalDurationSeconds === 0 ? `(${t("unknown")})` : `${tmin}:${tsec}\``}`
         }`
       )
-      .setFields(
-        ...info.toField(
-          ["long", "l", "verbose", "l", "true"].some(arg => context.args[0] === arg),
-          t
-        )
-      )
+      .setFields(...info.toField(["long", "l", "verbose", "l", "true"].some(arg => context.args[0] === arg)))
       .addField(":link:URL", info.url);
 
     if(typeof info.thumbnail === "string"){

@@ -36,7 +36,7 @@ Glitchのトップ画面から、右上にある`New project`をクリックし�
   git fetch
   git reset --hard <最新のバージョン>
   ```
-  `最新のバージョン`は適宜現時点での最新のバージョンに読みかえてください。
+  `最新のバージョン`(例：`v4.2.0`)は適宜現時点での最新のバージョンに読みかえてください。
 
 ### 3. ボットが動作するようファイルを編集します
 ボットが動作するよう、いくつかのファイルを変更する必要があります。
@@ -54,7 +54,7 @@ Glitchのトップ画面から、右上にある`New project`をクリックし�
   -   "onlystart": "node util/exec dist",
   +   "onlystart": "node util/exec out",
   -   "build": "rimraf dist/ typings/ && tsc",
-  +   "build": "rimraf out/ typings/ && tsc",
+  +   "build": "rimraf out/ typings/ && tsc || exit 0",
       "lint": "eslint .",
   ```
 
@@ -62,11 +62,11 @@ Glitchのトップ画面から、右上にある`New project`をクリックし�
 [「ボットの設定について」](./configuration.md)を参考に、ボットの設定を行います。
 
 * `config.json`は画面左の`Files`のところにある`+`ボタンをクリックし、`config.json`という名前でファイルを作成し、`config.json.sample`の内容をコピー＆ペーストして設定します。  
-  ![Files>+](https://cdn.discordapp.com/attachments/1076366496818806825/1076524737548800120/image.png)
+  ![Files>+](https://static-objects.usamyon.moe/dsmb/docs-assets/guide_glitch_file.png)
   　
-  ![config.jsonの名前で保存](https://cdn.discordapp.com/attachments/1076366496818806825/1076524799565770832/image.png)
+  ![config.jsonの名前で保存](https://static-objects.usamyon.moe/dsmb/docs-assets/guide_glitch_add_file.png)
 * `.env`は図のように設定します。
-  ![envの設定例](https://cdn.discordapp.com/attachments/1076366496818806825/1076524525115670648/image.png)
+  ![envの設定例](https://static-objects.usamyon.moe/dsmb/docs-assets/guide_glitch_env.png)
 
 ### 5. 完了
   しばらくすると、ボットが起動します。ボットの状況については画面下の`LOGS`をクリックしてログを参照してください。

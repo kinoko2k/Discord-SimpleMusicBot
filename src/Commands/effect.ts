@@ -18,7 +18,6 @@
 
 import type { CommandArgs } from ".";
 import type { CommandMessage } from "../Component/commandResolver/CommandMessage";
-import type { i18n } from "i18next";
 import type { MessageActionRow } from "oceanic.js";
 
 import { MessageActionRowBuilder, MessageButtonBuilder } from "@mtripg6666tdr/oceanic-command-resolver/helper";
@@ -37,8 +36,10 @@ export default class Effect extends BaseCommand {
     });
   }
 
-  async run(message: CommandMessage, context: CommandArgs, t: i18n["t"]){
-    context.server.updateBoundChannel(message);
+  @BaseCommand.updateBoundChannel
+  async run(message: CommandMessage, context: CommandArgs){
+    const { t } = context;
+
     try{
       const { collector, customIdMap } = context.server.bot.collectors.create()
         .setAuthorIdFilter(message.member.id)
@@ -74,12 +75,12 @@ export default class Effect extends BaseCommand {
       };
 
       const reply = await message.reply({
-        embeds: [context.server.audioEffects.createEmbed(message.member.avatarURL(), t)],
+        embeds: [context.server.audioEffects.createEmbed(message.member.avatarURL())],
         components: createActionRow(),
       });
       const updateEffectEmbed = (emptyrow = false) => {
         reply.edit({
-          embeds: [context.server.audioEffects.createEmbed(message.member.avatarURL(), t)],
+          embeds: [context.server.audioEffects.createEmbed(message.member.avatarURL())],
           components: emptyrow ? [] : createActionRow(),
         }).catch(this.logger.error);
       };

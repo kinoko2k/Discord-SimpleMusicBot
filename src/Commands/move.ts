@@ -18,7 +18,6 @@
 
 import type { CommandArgs } from ".";
 import type { CommandMessage } from "../Component/commandResolver/CommandMessage";
-import type { i18n } from "i18next";
 
 import { BaseCommand } from ".";
 
@@ -28,7 +27,7 @@ export default class Mv extends BaseCommand {
       alias: ["move", "mv"],
       unlist: false,
       category: "playlist",
-      argument: [
+      args: [
         {
           type: "integer",
           name: "from",
@@ -47,8 +46,9 @@ export default class Mv extends BaseCommand {
     });
   }
 
-  async run(message: CommandMessage, context: CommandArgs, t: i18n["t"]){
-    context.server.updateBoundChannel(message);
+  @BaseCommand.updateBoundChannel
+  async run(message: CommandMessage, context: CommandArgs){
+    const { t } = context;
 
     if(context.args.length !== 2){
       message.reply(`✘${t("commands:move.invalidArgumentCount")}`).catch(this.logger.error);

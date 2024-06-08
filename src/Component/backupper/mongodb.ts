@@ -16,15 +16,15 @@
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
-import type { exportableStatuses } from ".";
 import type { BaseCommand, CommandArgs } from "../../Commands";
 import type { GuildDataContainer, YmxFormat } from "../../Structure";
 import type { DataType, MusicBotBase } from "../../botBase";
+import type { JSONStatuses } from "../../types/GuildStatuses";
 import type * as mongo from "mongodb";
 
 import { Backupper } from ".";
 import { createDebounceFunctionsFactroy, requireIfAny, waitForEnteringState } from "../../Util";
-import { timeLoggedMethod } from "../../logger";
+import { measureTime } from "../../Util/decorators";
 import { CommandManager } from "../commandManager";
 
 const MongoClient = (requireIfAny("mongodb") as typeof import("mongodb"))?.MongoClient;
@@ -46,7 +46,7 @@ export class MongoBackupper extends Backupper {
   private dbConnectionReady = false;
   private dbError: Error | null = null;
   collections: {
-    status: mongo.Collection<Collectionate<exportableStatuses>>,
+    status: mongo.Collection<Collectionate<JSONStatuses>>,
     queue: mongo.Collection<Collectionate<YmxFormat>>,
     analytics: mongo.Collection<Analytics>,
   } = null!;
@@ -69,7 +69,7 @@ export class MongoBackupper extends Backupper {
         this.logger.info("Database connection ready");
         const db = this.client.db(process.env.DB_TOKEN || "discord_music_bot_backup");
         this.collections = {
-          status: db.collection<Collectionate<exportableStatuses>>("Status"),
+          status: db.collection<Collectionate<JSONStatuses>>("Status"),
           queue: db.collection<Collectionate<YmxFormat>>("Queue"),
           analytics: db.collection<Analytics>("Analytics"),
         };
@@ -91,6 +91,7 @@ export class MongoBackupper extends Backupper {
         container.queue.eitherOn(["change", "changeWithoutCurrent"], backupQueueFuncFactory(container.getGuildId()));
         container.queue.on("settingsChanged", backupStatusFuncFactory(container.getGuildId()));
         container.player.on("all", backupStatusFuncFactory(container.getGuildId()));
+        container.preferences.on("updateSettings", backupStatusFuncFactory(container.getGuildId()));
         container.player.on("reportPlaybackDuration", this.addPlayerAnalyticsEvent.bind(this, container.getGuildId()));
       };
 
@@ -117,7 +118,7 @@ export class MongoBackupper extends Backupper {
     }
   }
 
-  @timeLoggedMethod
+  @measureTime
   async backupStatus(guildId: string){
     if(!MongoBackupper.backuppable || !this.dbConnectionReady) return;
     try{
@@ -139,7 +140,7 @@ export class MongoBackupper extends Backupper {
     }
   }
 
-  @timeLoggedMethod
+  @measureTime
   async backupQueue(guildId: string){
     if(!MongoBackupper.backuppable || !this.dbConnectionReady) return;
     try{
@@ -197,7 +198,7 @@ export class MongoBackupper extends Backupper {
     }
   }
 
-  @timeLoggedMethod
+  @measureTime
   override async getStatusFromBackup(guildIds: string[]){
     if(!this.dbConnectionReady && !this.dbError) await waitForEnteringState(() => this.dbConnectionReady || !!this.dbError, Infinity);
     if(this.dbError){
@@ -210,7 +211,7 @@ export class MongoBackupper extends Backupper {
           guildId: id,
         })),
       });
-      const result = new Map<string, exportableStatuses>();
+      const result = new Map<string, JSONStatuses>();
       for await(const doc of dbResult){
         result.set(doc.guildId, doc);
       }
@@ -223,7 +224,7 @@ export class MongoBackupper extends Backupper {
     }
   }
 
-  @timeLoggedMethod
+  @measureTime
   override async getQueueDataFromBackup(guildids: string[]){
     if(!this.dbConnectionReady && !this.dbError) await waitForEnteringState(() => this.dbConnectionReady || !!this.dbError, Infinity);
     if(this.dbError){

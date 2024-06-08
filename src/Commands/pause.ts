@@ -18,7 +18,6 @@
 
 import type { CommandArgs } from ".";
 import type { CommandMessage } from "../Component/commandResolver/CommandMessage";
-import type { i18n } from "i18next";
 
 import { BaseCommand } from ".";
 
@@ -32,9 +31,11 @@ export default class Pause extends BaseCommand {
       shouldDefer: false,
     });
   }
-  
-  async run(message: CommandMessage, context: CommandArgs, t: i18n["t"]){
-    context.server.updateBoundChannel(message);
+
+  @BaseCommand.updateBoundChannel
+  async run(message: CommandMessage, context: CommandArgs){
+    const { t } = context;
+
     // そもそも再生状態じゃないよ...
     if(!context.server.player.isPlaying){
       await message.reply(t("notPlaying")).catch(this.logger.error);

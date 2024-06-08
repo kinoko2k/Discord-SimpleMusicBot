@@ -18,7 +18,6 @@
 
 import type { CommandArgs } from ".";
 import type { CommandMessage } from "../Component/commandResolver/CommandMessage";
-import type { i18n } from "i18next";
 
 import { BaseCommand } from ".";
 
@@ -33,8 +32,10 @@ export default class Rmall extends BaseCommand {
     });
   }
 
-  async run(message: CommandMessage, context: CommandArgs, t: i18n["t"]){
-    context.server.updateBoundChannel(message);
+  @BaseCommand.updateBoundChannel
+  async run(message: CommandMessage, context: CommandArgs){
+    const { t } = context;
+
     await context.server.player.disconnect().catch(this.logger.error);
     context.server.queue.removeAll();
     await message.reply(`✅${t("commands:removeall.removed")}`).catch(this.logger.error);

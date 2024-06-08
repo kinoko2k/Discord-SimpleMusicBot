@@ -16,14 +16,14 @@
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
-import type { exportableStatuses } from ".";
 import type { YmxFormat } from "../../Structure";
 import type { DataType, MusicBotBase } from "../../botBase";
+import type { JSONStatuses } from "../../types/GuildStatuses";
 
 import candyget from "candyget";
 
 import { IntervalBackupper } from ".";
-import { timeLoggedMethod } from "../../logger";
+import { measureTime } from "../../Util/decorators";
 
 const MIME_JSON = "application/json";
 
@@ -43,7 +43,7 @@ export class HttpBackupper extends IntervalBackupper {
   /**
    * 接続ステータス等をバックアップします
    */
-  @timeLoggedMethod
+  @measureTime
   protected override async backupStatus(){
     try{
       const statusModifiedGuildIds = this.getStatusModifiedGuildIds();
@@ -56,7 +56,7 @@ export class HttpBackupper extends IntervalBackupper {
       this.logger.info("Backing up modified status...");
 
       const statuses: { [guildId: string]: string } = {};
-      const originalStatuses: { [guildId: string]: exportableStatuses } = {};
+      const originalStatuses: { [guildId: string]: JSONStatuses } = {};
       statusModifiedGuildIds.forEach(id => {
         const status = this.data.get(id)?.exportStatus();
         if(!status) return;
@@ -69,6 +69,8 @@ export class HttpBackupper extends IntervalBackupper {
           status.addRelatedSongs ? "1" : "0",
           status.equallyPlayback ? "1" : "0",
           status.volume,
+          status.disableSkipSession,
+          status.nowPlayingNotificationLevel,
         ].join(":");
         originalStatuses[id] = status;
       });
@@ -98,7 +100,7 @@ export class HttpBackupper extends IntervalBackupper {
   /**
    * キューをバックアップします
    */
-  @timeLoggedMethod
+  @measureTime
   protected override async backupQueue(){
     try{
       const modifiedGuildIds = this.getQueueModifiedGuildIds();
@@ -144,7 +146,7 @@ export class HttpBackupper extends IntervalBackupper {
     }
   }
 
-  @timeLoggedMethod
+  @measureTime
   override async getStatusFromBackup(guildids: string[]){
     if(HttpBackupper.backuppable){
       try{
@@ -159,7 +161,7 @@ export class HttpBackupper extends IntervalBackupper {
         );
         if(result.status === 200){
           const frozenGuildStatuses = result.data;
-          const map = new Map<string, exportableStatuses>();
+          const map = new Map<string, JSONStatuses>();
           Object.keys(frozenGuildStatuses).forEach(key => {
             const [
               voiceChannelId,
@@ -169,6 +171,8 @@ export class HttpBackupper extends IntervalBackupper {
               addRelatedSongs,
               equallyPlayback,
               volume,
+              disableSkipSession,
+              nowPlayingNotificationLevel,
             ] = frozenGuildStatuses[key].split(":");
             const numVolume = Number(volume) || 100;
             const b = (v: string) => v === "1";
@@ -180,6 +184,8 @@ export class HttpBackupper extends IntervalBackupper {
               addRelatedSongs: b(addRelatedSongs),
               equallyPlayback: b(equallyPlayback),
               volume: numVolume >= 1 && numVolume <= 200 ? numVolume : 100,
+              disableSkipSession: b(disableSkipSession),
+              nowPlayingNotificationLevel: Number(nowPlayingNotificationLevel) || 0,
             });
           });
           return map;
@@ -197,7 +203,7 @@ export class HttpBackupper extends IntervalBackupper {
     }
   }
 
-  @timeLoggedMethod
+  @measureTime
   override async getQueueDataFromBackup(guildids: string[]){
     if(HttpBackupper.backuppable){
       try{
