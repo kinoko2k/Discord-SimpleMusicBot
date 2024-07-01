@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 mtripg6666tdr
+ * Copyright 2021-2024 mtripg6666tdr
  * 
  * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
@@ -132,7 +132,7 @@ export abstract class AudioSource<T extends ThumbnailType, U extends AudioSource
   protected logger: LoggerObject;
 
   constructor(options: { isSeekable?: boolean, isCacheable?: boolean } = {}){
-    options = Object.assign({ isSeekable: true, isCacheable: false }, options);
+    options = Object.assign({ isSeekable: true, isCacheable: true }, options);
     this.logger = getLogger(this.constructor.name);
     this._isSeekable = options.isSeekable!;
     this._isCacheable = options.isCacheable!;
@@ -183,6 +183,8 @@ export type UrlStreamInfo = {
   url: string,
   streamType: StreamTypeIdentifer | null,
   userAgent?: string,
+  cookie?: string,
+  canBeWithVideo?: boolean,
 };
 
 YouTubeAlias = require("./youtube").YouTube;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 mtripg6666tdr
+ * Copyright 2021-2024 mtripg6666tdr
  * 
  * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
@@ -228,7 +228,7 @@ export abstract class MusicBotBase extends LogEmitter<BotBaseEvents> {
   /**
    * 必要に応じてサーバーデータを初期化します
    */
-  protected initData(guildid: string, boundChannelId: string){
+  protected upsertData(guildid: string, boundChannelId: string){
     const prev = this.guildData.get(guildid);
     if(!prev){
       const config = getConfig();

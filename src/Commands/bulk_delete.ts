@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 mtripg6666tdr
+ * Copyright 2021-2024 mtripg6666tdr
  * 
  * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
@@ -52,9 +52,7 @@ export default class BulkDelete extends BaseCommand {
       message.reply(`:warning:${t("commands:bulk_delete.invalidMessageCount")}`).catch(this.logger.error);
       return;
     }
-    const reply = await message.reply(
-      t("commands:bulk_delete.loading") + "..."
-    ).catch(this.logger.error) as ResponseMessage;
+    const reply = await message.reply(`${t("commands:bulk_delete.loading")}...`).catch(this.logger.error) as ResponseMessage;
     try{
       // collect messages
       let before = "";
@@ -109,7 +107,6 @@ export default class BulkDelete extends BaseCommand {
         // bulk delete
         await message.channel.deleteMessages(
           messages.map(msg => msg.id),
-           
           t("commands:bulk_delete.auditLog", { issuer: message.member.username, count })
         );
         await reply.edit({
@@ -120,7 +117,6 @@ export default class BulkDelete extends BaseCommand {
       });
       collector.on("timeout", () => {
         reply.edit({
-           
           content: t("commands:bulk_delete.cancel"),
           components: [],
         }).catch(this.logger.error);

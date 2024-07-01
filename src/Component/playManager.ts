@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 mtripg6666tdr
+ * Copyright 2021-2024 mtripg6666tdr
  * 
  * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
@@ -16,28 +16,29 @@
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
+import type { AudioSource } from "../AudioSource";
 import type { GuildDataContainer } from "../Structure";
 import type { AudioPlayer } from "@discordjs/voice";
+import type { TextChannel, Member, Message } from "oceanic.js";
 import type { Readable } from "stream";
-
 
 import { NoSubscriberBehavior } from "@discordjs/voice";
 import { AudioPlayerStatus, createAudioResource, createAudioPlayer, entersState, StreamType, VoiceConnectionStatus } from "@discordjs/voice";
 import { MessageActionRowBuilder, MessageButtonBuilder, MessageEmbedBuilder } from "@mtripg6666tdr/oceanic-command-resolver/helper";
 import i18next from "i18next";
-import { MessageFlags, type Member, type Message, type TextChannel } from "oceanic.js";
+import { MessageFlags } from "oceanic.js";
 
 import { FixedAudioResource } from "./audioResource";
 import { resolveStreamToPlayable } from "./streams";
 import { DSL } from "./streams/dsl";
 import { Normalizer } from "./streams/normalizer";
-import { type AudioSource } from "../AudioSource";
 import { ServerManagerBase } from "../Structure";
 import * as Util from "../Util";
 import { getColor } from "../Util/color";
 import { measureTime } from "../Util/decorators";
 import { getConfig } from "../config";
 import { NowPlayingNotificationLevel } from "../types/GuildPreferences";
+
 
 interface PlayManagerEvents {
   volumeChanged: [volume:string];
@@ -92,6 +93,8 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
   protected _dsLogger: DSL | null = null;
   protected _playing: boolean = false;
   protected _lastMember: string | null = null;
+  protected _sleeptimerCurrentSong: boolean = false;
+  protected _sleeptimerTimeout: NodeJS.Timeout | null = null;
 
   get preparing(){
     return this._preparing;
@@ -105,7 +108,7 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
     return this._currentAudioInfo;
   }
 
-  get currentAudioUrl(): string{
+  get currentAudioUrl(): string {
     if(this.currentAudioInfo) return this.currentAudioInfo.url;
     else return "";
   }
@@ -195,7 +198,11 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
     this.logger.info("#play called");
     this.emit("playPreparing", time);
     this.preparing = true;
-    let mes: Message | null = null;
+
+    let messageIsSending = false;
+    let messageSendingTimeout: NodeJS.Timeout | null = null;
+    let messageSendingScheduledAt: number | null = null;
+    let message: Message | null = null;
     this._currentAudioInfo = this.server.queue.get(0).basicInfo;
 
     const [min, sec] = Util.time.calcMinSec(this.currentAudioInfo!.lengthSeconds);
@@ -205,7 +212,7 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
     if(isYT && this.currentAudioInfo.availableAfter){
       const waitTarget = this.currentAudioInfo;
       // まだ始まっていないライブを待機する
-      mes = this.getNoticeNeeded() && !quiet && await this.server.bot.client.rest.channels.createMessage(
+      message = this.getNoticeNeeded() && !quiet && await this.server.bot.client.rest.channels.createMessage(
         this.server.boundTextChannel,
         {
           content: `:stopwatch:${i18next.t("components:play.waitingForLiveStream", {
@@ -226,10 +233,10 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
       });
       if(abortController.signal.aborted){
         this._waitForLiveAbortController = null;
-        const content = `:white_check_mark:${i18next.t("components:play.waitingForLiveCanceled", { lng: this.server.locale })}`;
+        const content = `:white_check_mark: ${i18next.t("components:play.waitingForLiveCanceled", { lng: this.server.locale })}`;
 
-        if(mes){
-          mes.edit({ content }).catch(this.logger.error);
+        if(message){
+          message.edit({ content }).catch(this.logger.error);
         }else{
           this.server.bot.client.rest.channels.createMessage(
             this.server.boundTextChannel,
@@ -243,22 +250,31 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
       this.preparing = true;
     }else if(this.getNoticeNeeded() && !quiet && this.server.preferences.nowPlayingNotificationLevel !== NowPlayingNotificationLevel.Disable){
       // 通知メッセージを送信する（可能なら）
-      mes = await this.server.bot.client.rest.channels.createMessage(
-        this.server.boundTextChannel,
-        {
-          content: `:hourglass_flowing_sand:${
-            i18next.t("components:play.preparing", {
-              title: `\`${this.currentAudioInfo!.title}\` \`(${
-                isLive ? i18next.t("liveStream", { lng: this.server.locale }) : `${min}:${sec}`
-              })\``,
-              lng: this.server.locale,
-            })
-          }...`,
-          flags: this.server.preferences.nowPlayingNotificationLevel === NowPlayingNotificationLevel.Silent
-            ? MessageFlags.SUPPRESS_NOTIFICATIONS
-            : 0,
-        }
-      );
+      // このとき、即時には送信せずに、3秒間の猶予を儲ける
+      messageSendingTimeout = setTimeout(async () => {
+        messageIsSending = true;
+        message = await this.server.bot.client.rest.channels.createMessage(
+          this.server.boundTextChannel,
+          {
+            content: `:hourglass_flowing_sand:${
+              i18next.t("components:play.preparing", {
+                title: `\`${this.currentAudioInfo!.title}\` \`(${
+                  isLive ? i18next.t("liveStream", { lng: this.server.locale }) : `${min}:${sec}`
+                })\``,
+                lng: this.server.locale,
+              })
+            }...`,
+            flags: this.server.preferences.nowPlayingNotificationLevel === NowPlayingNotificationLevel.Silent
+              ? MessageFlags.SUPPRESS_NOTIFICATIONS
+              : 0,
+          }
+        ).catch(er => {
+          this.logger.error(er);
+          return null;
+        });
+        messageIsSending = false;
+      }, 2.5e3).unref();
+      messageSendingScheduledAt = Date.now();
     }
 
     try{
@@ -294,7 +310,9 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
       }
 
       // 各種準備
-      this._errorReportChannel = mes?.channel as TextChannel;
+      this._errorReportChannel = (message?.channel as TextChannel | undefined)
+        || this.server.bot.client.getChannel<TextChannel>(this.server.boundTextChannel)
+        || await this.server.bot.client.rest.channels.get<TextChannel>(this.server.boundTextChannel);
       this._cost = cost;
       this._lastMember = null;
       this.prepareAudioPlayer();
@@ -329,6 +347,7 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
       const waitingSucceeded = await entersState(this._player!, AudioPlayerStatus.Playing, 10e3)
         .then(() => true)
         .catch(() => false);
+
       // when occurring one or more error(s) while waiting for player,
       // the error(s) should be also emitted from AudioPlayer and handled by PlayManager#handleError
       // so simply ignore the error(s) here.
@@ -342,21 +361,63 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
 
       this.logger.info("Playback started successfully");
 
-      if(mes && !quiet){
+      // 現在再生中パネルを送信していい環境な場合に以下のブロックを実行する
+      if(messageSendingTimeout){
         // 再生開始メッセージ
         const messageContent = this.createNowPlayingMessage();
 
-        mes.edit(messageContent).catch(this.logger.error);
+        clearTimeout(messageSendingTimeout);
 
-        this.eitherOnce(["playCompleted", "handledError", "stop"], () => {
-          mes.edit({
-            components: [],
-          }).catch(this.logger.error);
-        });
+        // 送信されかけているなら送信完了まで待つ
+        if(!message && messageIsSending){
+          await Util.waitForEnteringState(() => !messageIsSending, 10e3, { rejectOnTimeout: false });
+        }
+
+        this.logger.debug(`Preparing elapsed time: ${Date.now() - messageSendingScheduledAt!}ms`);
+
+        if(message){
+          // すでに送信されているメッセージがある場合それを利用する
+          message.edit(messageContent).catch(this.logger.error);
+        }else{
+          // メッセージが送信されていないなら新規で作成する。
+          message = await this.server.bot.client.rest.channels.createMessage(
+            this.server.boundTextChannel,
+            {
+              ...messageContent,
+              flags: this.server.preferences.nowPlayingNotificationLevel === NowPlayingNotificationLevel.Silent
+                ? MessageFlags.SUPPRESS_NOTIFICATIONS
+                : 0,
+            },
+          ).catch(er => {
+            this.logger.error(er);
+            return null;
+          });
+        }
+
+        // エラー等でmessageがnullになっている場合は何もしない
+        if(message){
+          const _localMessage = message;
+
+          this.eitherOnce(["playCompleted", "handledError", "stop"], () => {
+            _localMessage.edit({
+              components: [],
+            }).catch(this.logger.error);
+          });
+        }
       }
 
+      // ラジオが有効になっている場合、次の曲を準備する
       if(this.server.queue.mixPlaylistEnabled){
         await this.server.queue.prepareNextMixItem();
+      }
+
+      // 条件に合致した場合、次の曲をプリフェッチする
+      if(this.server.queue.length >= 2 && this.currentAudioInfo!.lengthSeconds <= 7200 /* 2 * 60 * 60 */){
+        const nextSong = this.server.queue.get(1);
+        if(nextSong.basicInfo.isYouTube()){
+          this.logger.info("Prefetching next song beforehand.");
+          await nextSong.basicInfo.refreshInfo({ forceCache: true, onlyIfNoCache: true }).catch(this.logger.error);
+        }
       }
     }
     catch(e){
@@ -380,7 +441,7 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
     );
     /* eslint-disable @typescript-eslint/indent */
     const embed = new MessageEmbedBuilder()
-      .setTitle(`:cd:${i18next.t("components:nowplaying.nowplayingTitle", { lng: this.server.locale })}:musical_note:`)
+      .setTitle(`:cd: ${i18next.t("components:nowplaying.nowplayingTitle", { lng: this.server.locale })} :musical_note:`)
       .setDescription(
         (
           this.currentAudioInfo.isPrivateSource
@@ -437,7 +498,7 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
     if(this.currentAudioInfo.isYouTube()){
       if(this.currentAudioInfo.isFallbacked){
         embed.addField(
-          `:warning:${i18next.t("attention", { lng: this.server.locale })}`,
+          `:warning: ${i18next.t("attention", { lng: this.server.locale })}`,
           i18next.t("components:queue.fallbackNotice", { lng: this.server.locale })
         );
       }else if(this.currentAudioInfo.strategyId === 1){
@@ -589,6 +650,8 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
     this.server.connection = null;
     this.server.connectingVoiceChannel = null;
     this._player = null;
+    this._sleeptimerCurrentSong = false;
+    this.clearSleepTimerTimeout();
 
     if(typeof global.gc === "function"){
       global.gc();
@@ -599,17 +662,13 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
 
   destroyStream(){
     if(this._currentAudioStream){
-      setImmediate(() => {
-        if(this._currentAudioStream){
-          if(!this._currentAudioStream.destroyed){
-            this._currentAudioStream.destroy();
-          }
-          this._currentAudioStream = null;
-          if(this._resource){
-            this._resource = null;
-          }
-        }
-      });
+      if(!this._currentAudioStream.destroyed){
+        this._currentAudioStream.destroy();
+      }
+      this._currentAudioStream = null;
+      if(this._resource){
+        this._resource = null;
+      }
       this._dsLogger?.destroy();
     }
   }
@@ -713,25 +772,36 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
     this._cost = 0;
     this.destroyStream();
 
+    // スリープタイマーの処理
+    if(this._sleeptimerCurrentSong){
+      if(!this.server.queue.loopEnabled && !this.server.queue.queueLoopEnabled){
+        await this.server.queue.next();
+      }
+
+      await this.sendSleepMessage();
+      await this.disconnect().catch(this.logger.error);
+
+      return;
+    }
+
     if(this.server.queue.loopEnabled){
       // 曲ループオンならばもう一度再生
       await this.play();
-      return;
     }else if(this.server.queue.onceLoopEnabled){
       // ワンスループが有効ならもう一度同じものを再生
       this.server.queue.onceLoopEnabled = false;
       await this.play();
-      return;
     }else{
       // キュー整理
       await this.server.queue.next();
-    }
-    // キューがなくなったら接続終了
-    if(this.server.queue.isEmpty){
-      await this.onQueueEmpty();
-    // なくなってないなら再生開始！
-    }else{
-      await this.play();
+
+      // キューがなくなったら接続終了
+      if(this.server.queue.isEmpty){
+        await this.onQueueEmpty();
+      }else{
+        // なくなってないなら再生開始！
+        await this.play();
+      }
     }
   }
 
@@ -803,6 +873,49 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
       await this.server.queue.next();
     }
     await this.play({ quiet: quiet });
+  }
+
+  setSleepTimer(currentSong: boolean): void;
+  setSleepTimer(timeSeconds: number): void;
+  setSleepTimer(arg: boolean | number): void {
+    if(typeof arg === "boolean"){
+      this._sleeptimerCurrentSong = arg;
+      this.clearSleepTimerTimeout();
+      return;
+    }
+
+    this._sleeptimerCurrentSong = false;
+    const timeSeconds = arg;
+
+    if(timeSeconds < 0){
+      throw new Error("timeSeconds must be positive number");
+    }else if(timeSeconds === 0){
+      this.clearSleepTimerTimeout();
+      return;
+    }
+
+    if(this._sleeptimerTimeout){
+      clearTimeout(this._sleeptimerTimeout);
+    }
+
+    this._sleeptimerTimeout = setTimeout(async () => {
+      await this.sendSleepMessage();
+
+      await this.disconnect().catch(this.logger.error);
+    }, timeSeconds * 1000).unref();
+  }
+
+  protected clearSleepTimerTimeout(){
+    if(this._sleeptimerTimeout){
+      clearTimeout(this._sleeptimerTimeout);
+      this._sleeptimerTimeout = null;
+    }
+  }
+
+  protected async sendSleepMessage(){
+    await this.server.bot.client.rest.channels.createMessage(this.server.boundTextChannel, {
+      content: `:zzz: ${i18next.t("commands:sleeptimer.slept")}`,
+    }).catch(this.logger.error);
   }
 
   override emit<U extends keyof PlayManagerEvents>(event: U, ...args: PlayManagerEvents[U]): boolean {

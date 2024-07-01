@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 mtripg6666tdr
+ * Copyright 2021-2024 mtripg6666tdr
  * 
  * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
@@ -34,8 +34,8 @@ export default class Skip extends BaseCommand {
   }
 
   async run(message: CommandMessage, context: CommandArgs){
-    const { t } = context;
-    const server = context.server;
+    const { t, server } = context;
+
     // そもそも再生状態じゃない
     if(server.player.preparing){
       message.reply(t("commands:skip.preparing")).catch(this.logger.error);

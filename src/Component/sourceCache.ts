@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 mtripg6666tdr
+ * Copyright 2021-2024 mtripg6666tdr
  * 
  * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
@@ -164,8 +164,7 @@ export class SourceCache extends LogEmitter<CacheEvents> {
           .map(file => fs.promises.stat(path.join(this.cacheDirPath, file.name)))
       ))
       .then(sizes =>
-        (sizes.filter(d => d.status === "fulfilled") as PromiseFulfilledResult<fs.Stats>[])
-          .reduce((prev, current) => prev + current.value.size, 0)
+        sizes.filter(d => d.status === "fulfilled").reduce((prev, current) => prev + current.value.size, 0)
       );
   }
 

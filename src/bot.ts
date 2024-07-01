@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 mtripg6666tdr
+ * Copyright 2021-2024 mtripg6666tdr
  * 
  * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
@@ -48,6 +48,14 @@ export class MusicBot extends MusicBotBase {
     return this._telemetry;
   }
 
+  // ready.ts で値を代入しているため
+  // eslint-disable-next-line @typescript-eslint/prefer-readonly
+  private _mentionText: `<@${string}>` = "" as `<@${string}>`;
+
+  get mentionText(){
+    return this._mentionText;
+  }
+
   constructor(token: string, maintenance: boolean = false){
     super(maintenance);
 
@@ -93,14 +101,15 @@ export class MusicBot extends MusicBotBase {
 
   private async onError(er: Error){
     this.logger.error(er);
-    if(er.message?.startsWith("Invalid token")){
-      this.logger.fatal(
-        "Invalid token detected. Please ensure that you set the correct token. You can also re-generate new token for your bot."
-      );
-      process.exit(1);
+    if(er.message?.startsWith("Invalid token") || (er.cause as Error | undefined)?.message?.includes("401: Unauthorized")){
+      throw new Error("Invalid token detected. Please ensure that you set the correct token. You can also re-generate a new token for your bot.");
     }else{
-      this.logger.info("Attempt reconnecting after waiting for a while...");
-      this._client.disconnect(true);
+      if(this.client.shards.some(shard => shard.status === "disconnected")){
+        this.logger.info("Attempt reconnecting after waiting for a while...");
+        this._client.disconnect(true);
+      }
+
+      this.telemetry?.registerError(er);
     }
   }
 
@@ -116,7 +125,7 @@ export class MusicBot extends MusicBotBase {
    * Botを開始します。
    */
   run(){
-    this._client.connect().catch(e => this.logger.error(e));
+    this._client.connect().catch(this.onError.bind(this));
   }
 
   async stop(){
@@ -147,7 +156,7 @@ export class MusicBot extends MusicBotBase {
       server: this.guildData.get(guildId)!,
       rawArgs: optiont,
       client: this._client,
-      initData: this.initData.bind(this),
+      initData: this.upsertData.bind(this),
       includeMention: false,
       locale,
       t: i18next.getFixedT(locale),

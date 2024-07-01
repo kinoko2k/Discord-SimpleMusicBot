@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 mtripg6666tdr
+ * Copyright 2021-2024 mtripg6666tdr
  * 
  * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
@@ -457,11 +457,11 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
    * メッセージからストリームを判定してキューに追加し、状況に応じて再生を開始します
    * @param first キューの先頭に追加するかどうか
    */
-  async playFromURL(
+  async playFromUrl(
     message: CommandMessage,
-    rawArg: string|string[],
+    rawArg: string | string[],
     {
-      first = true,
+      first = false,
       cancellable = false,
       privateSource = false,
     }: {
@@ -479,11 +479,7 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
       const results: (QueueContent | null)[] = [];
 
       if(firstUrl){
-        // eslint-disable-next-line prefer-spread
-        results.push.apply(
-          results,
-          await this.playFromURL(message, firstUrl, { first, cancellable: false })
-        );
+        results.push(...await this.playFromUrl(message, firstUrl, { first, cancellable: false }));
 
         if(restUrls){
           for(let i = 0; i < restUrls.length; i++){
@@ -531,7 +527,7 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
 
         if(ch.guild.id !== msg.channel.guild.id){
           throw new Error(t("guildDataContainer.unableToPlayOtherServer"));
-        }else if(msg.attachments.size <= 0 || !Util.isAvailableRawAudioURL(msg.attachments.first()?.url || null)){
+        }else if(msg.attachments.size <= 0 || Util.getResourceTypeFromUrl(msg.attachments.first()?.url || null) === "none"){
           throw new Error(t("guildDataContainer.attachmentNotFound"));
         }
 
@@ -560,7 +556,7 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
 
 
     // オーディオファイルへの直リンク？
-    else if(!config.isDisabledSource("custom") && Util.isAvailableRawAudioURL(rawArg)){
+    else if(!config.isDisabledSource("custom") && Util.getResourceTypeFromUrl(rawArg) !== "none"){
       const item = await this.queue.addQueue({
         url: rawArg,
         addedBy: message.member,
@@ -771,7 +767,7 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
           url: rawArg,
           addedBy: message.member,
           first,
-          message: await message.reply(`${t("pleaseWait")}...`),
+          message,
           cancellable,
           privateSource,
         });
@@ -804,18 +800,18 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
 
     if(message.content.startsWith("http://") || message.content.startsWith("https://")){
       // URLのみのメッセージか？
-      await context.server.playFromURL(commandMessage, message.content, morePrefs);
+      await context.server.playFromUrl(commandMessage, message.content, morePrefs);
       return;
     }else if(
       message.content.substring(prefixLength).startsWith("http://")
         || message.content.substring(prefixLength).startsWith("https://")
     ){
       // プレフィックス+URLのメッセージか？
-      await context.server.playFromURL(commandMessage, message.content.substring(prefixLength), morePrefs);
+      await context.server.playFromUrl(commandMessage, message.content.substring(prefixLength), morePrefs);
       return;
     }else if(message.attachments.size > 0){
       // 添付ファイル付きか？
-      await context.server.playFromURL(commandMessage, message.attachments.first()!.url, morePrefs);
+      await context.server.playFromUrl(commandMessage, message.attachments.first()!.url, morePrefs);
       return;
     }else if(message.author.id === context.client.user.id || config.isWhiteListedBot(message.author.id)){
       // ボットのメッセージなら
@@ -831,7 +827,7 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
         const url = embed.description?.match(/^\[.+\]\((?<url>https?.+)\)/)?.groups!.url;
 
         if(url){
-          await context.server.playFromURL(commandMessage, url, morePrefs);
+          await context.server.playFromUrl(commandMessage, url, morePrefs);
           return;
         }
       }

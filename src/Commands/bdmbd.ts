@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 mtripg6666tdr
+ * Copyright 2021-2024 mtripg6666tdr
  * 
  * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
@@ -38,6 +38,6 @@ export default class BgmBd extends BaseCommand {
     const bgmPlaylistUrl = context.rawArgs.length === 0
       ? "aHR0cHM6Ly93d3cueW91dHViZS5jb20vcGxheWxpc3Q/bGlzdD1QTExmZmhjQXBzbzl4UFhLUG5YbEZ3czlxWUNkMDltTFA0"
       : "aHR0cHM6Ly93d3cueW91dHViZS5jb20vcGxheWxpc3Q/bGlzdD1QTExmZmhjQXBzbzl4WnpYZ0RFdEdsQk5wNUtYZjNPY1Zx";
-    await context.server.playFromURL(message, Buffer.from(bgmPlaylistUrl, "base64").toString(), {});
+    await context.server.playFromUrl(message, Buffer.from(bgmPlaylistUrl, "base64").toString(), {});
   }
 }

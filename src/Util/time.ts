@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 mtripg6666tdr
+ * Copyright 2021-2024 mtripg6666tdr
  * 
  * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
@@ -23,12 +23,12 @@ import type { i18n } from "i18next";
  * @param totalSec 合計時間(秒)
  * @returns [ゼロ補完された分,ゼロ補完された秒]
  */
-export function calcMinSec(totalSec: number){
+export function calcMinSec(totalSec: number, { fixedLength = 0 }: { fixedLength?: number } = {}): [string, string] {
   const sec = totalSec % 60;
   const min = (totalSec - sec) / 60;
   return [
     min.toString().padStart(2, "0"),
-    sec.toString().padStart(2, "0"),
+    sec.toFixed(fixedLength).padStart(fixedLength === 0 ? 2 : fixedLength + 3, "0"),
   ];
 }
 
@@ -37,14 +37,14 @@ export function calcMinSec(totalSec: number){
  * @param totalSec 合計時間(秒)
  * @returns [時間, ゼロ補完された分, ゼロ補完された秒]
  */
-export function calcHourMinSec(totalSec: number): [string, string, string]{
+export function calcHourMinSec(totalSec: number, { fixedLength = 0 }: { fixedLength?: number } = {}): [string, string, string]{
   const sec = totalSec % 60;
   const min = (totalSec - sec) / 60 % 60;
   const hr = ((totalSec - sec) / 60 - min) / 60;
   return [
     hr.toString(),
     min.toString().padStart(2, "0"),
-    sec.toString().padStart(2, "0"),
+    sec.toFixed(fixedLength).padStart(fixedLength === 0 ? 2 : fixedLength + 3, "0"),
   ];
 }
 
@@ -71,4 +71,19 @@ export function calcTime(date: number): number[]{
   const min = ato % 60;
   const hour = (ato - min) / 60;
   return [hour, min, sec, millisec];
+}
+
+//         50 => 50s
+//       5:00 => 5m 0s
+//    1:23:45 => 1h 23m 45s
+// 1: 5:20:12 => 1d 5h 20m 12s
+const colonSplittedTimeRegex = /^(\d+:){0,3}\d+$/;
+export function colonSplittedTimeToSeconds(colonSplittedTime: string){
+  if(!colonSplittedTimeRegex.test(colonSplittedTime)){
+    return NaN;
+  }
+
+  const times = colonSplittedTime.split(":").map(Number);
+  const day = times.length === 4 ? times.shift()! : 0;
+  return day * 86400 + times.reduce((prev, current) => prev * 60 + current);
 }

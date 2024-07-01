@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 mtripg6666tdr
+ * Copyright 2021-2024 mtripg6666tdr
  * 
  * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
@@ -20,6 +20,7 @@ import type { CommandArgs } from ".";
 import type { CommandMessage } from "../Component/commandResolver/CommandMessage";
 
 import { BaseCommand } from ".";
+import { colonSplittedTimeToSeconds } from "../Util/time";
 
 export default class Seek extends BaseCommand {
   constructor(){
@@ -53,14 +54,7 @@ export default class Seek extends BaseCommand {
     }
 
     // 引数から時間を算出
-    const time = (function(rawTime){
-      if(rawTime.match(/^(\d+:)*\d+$/)){
-        return rawTime.split(":").map(d => Number(d))
-          .reduce((prev, current) => prev * 60 + current);
-      }else{
-        return NaN;
-      }
-    }(context.rawArgs));
+    const time = colonSplittedTimeToSeconds(context.rawArgs);
 
     if(time > server.player.currentAudioInfo!.lengthSeconds || isNaN(time)){
       await message.reply(`:warning:${t("commands:seek.invalidTime")}`).catch(this.logger.error);

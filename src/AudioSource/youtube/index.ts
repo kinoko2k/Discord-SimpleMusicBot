@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 mtripg6666tdr
+ * Copyright 2021-2024 mtripg6666tdr
  * 
  * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
@@ -84,13 +84,19 @@ export class YouTube extends AudioSource<string, YouTubeJsonFormat> {
     if(prefetched){
       this.importData(prefetched);
     }else{
-      await this.refreshInfo(forceCache);
+      await this.refreshInfo({ forceCache });
     }
 
     return this;
   }
 
-  private async refreshInfo(forceCache?: boolean){
+  async refreshInfo(options: { forceCache?: boolean, onlyIfNoCache?: boolean } = {}){
+    const { forceCache, onlyIfNoCache } = Object.assign({ forceCache: false, onlyIfNoCache: false }, options);
+
+    if(onlyIfNoCache && this.cache){
+      return;
+    }
+
     const { result, resolved } = await attemptGetInfoForStrategies(this.url);
 
     // check if fallbacked
@@ -162,7 +168,7 @@ export class YouTube extends AudioSource<string, YouTubeJsonFormat> {
 
   async fetchVideo(){
     if(this.cacheIsStale){
-      await this.refreshInfo(true);
+      await this.refreshInfo({ forceCache: true });
     }
 
     if(this.cache?.data.type === ytdlCore){

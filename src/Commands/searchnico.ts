@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 mtripg6666tdr
+ * Copyright 2021-2024 mtripg6666tdr
  * 
  * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
@@ -70,7 +70,7 @@ export default class SearchN extends SearchBase<Datum[]> {
   }
 }
 
-const API_ENDPOINT = "https://api.search.nicovideo.jp/api/v2/snapshot/video/contents/search";
+const API_ENDPOINT = "https://snapshot.search.nicovideo.jp/api/v2/snapshot/video/contents/search";
 
 async function searchNicoNico(keyword: string){
   const url = `${API_ENDPOINT}?q=${encodeURIComponent(keyword)}&targets=title,description,tags&fields=contentId,title,lengthSeconds,thumbnailUrl,viewCounter&_sort=-viewCounter`;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 mtripg6666tdr
+ * Copyright 2021-2024 mtripg6666tdr
  * 
  * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
@@ -74,20 +74,26 @@ class ConfigLoader {
   protected load(){
     const checker = TypeCompiler.Compile(ConfigSchema);
 
-    const config = CJSON.parse(
-      fs.readFileSync(path.join(__dirname, global.BUNDLED ? "../config.json" : "../../config.json"), { encoding: "utf-8" }),
-      undefined,
-      true
-    );
+    let config: ReturnType<typeof CJSON.parse> = null;
+
+    try{
+      config = CJSON.parse(
+        fs.readFileSync(path.join(__dirname, global.BUNDLED ? "../config.json" : "../../config.json"), { encoding: "utf-8" }),
+        undefined,
+        true
+      );
+    }
+    catch(er){
+      throw new Error("Failed to parse `config.json`.", {
+        cause: er,
+      });
+    }
 
     const errs = [...checker.Errors(config)];
     if(errs.length > 0){
-      const er = new Error("Invalid config.json");
-      console.log(errs);
-      Object.defineProperty(er, "errors", {
-        value: errs,
+      throw new Error("Invalid `config.json`.", {
+        cause: errs,
       });
-      throw er;
     }
 
     if(DEVELOPMENT_PHASE && (!config || typeof config !== "object" || !("debug" in config) || !config.debug)){

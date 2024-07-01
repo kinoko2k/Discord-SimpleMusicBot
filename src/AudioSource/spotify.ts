@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 mtripg6666tdr
+ * Copyright 2021-2024 mtripg6666tdr
  * 
  * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
@@ -37,6 +37,10 @@ const client = spotifyUrlInfo((url, opts) => candyget(url, "string", opts).then(
 export class Spotify extends AudioSource<string, SpotifyJsonFormat> {
   protected artist = "";
   protected referenceUrl: string | null = null;
+
+  constructor(){
+    super({ isCacheable: false });
+  }
 
   override async init(url: string, prefetched: SpotifyJsonFormat): Promise<Spotify>{
     if(!Spotify.validateTrackUrl(url)) throw new Error("Invalid url");

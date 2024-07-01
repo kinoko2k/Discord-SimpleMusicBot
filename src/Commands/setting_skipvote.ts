@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 mtripg6666tdr
+ * Copyright 2021-2024 mtripg6666tdr
  * 
  * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
@@ -26,8 +26,8 @@ export default class SettingSkipvote extends BaseCommand {
     super({
       alias: ["setting>skipvote"],
       unlist: false,
-      category: "bot",
-      requiredPermissionsOr: ["admin", "dj", "onlyListener", "manageGuild"],
+      category: "settings",
+      requiredPermissionsOr: ["admin", "dj", "manageGuild"],
       shouldDefer: false,
       examples: false,
       usage: false,

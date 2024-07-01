@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 mtripg6666tdr
+ * Copyright 2021-2024 mtripg6666tdr
  * 
  * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
@@ -42,7 +42,7 @@ export default class Dc extends BaseCommand {
       return;
     }
     // 停止しま～す
-    await context.server.player.disconnect();
+    await context.server.player.disconnect().catch(this.logger.error);
     message.reply(`:postbox:${t("disconnected")}`).catch(this.logger.error);
   }
 }
