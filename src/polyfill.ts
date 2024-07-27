@@ -20,10 +20,13 @@ import { getLogger } from "./logger";
 
 const logger = getLogger("Polyfill");
 
+let polyfillCount = 0;
+
 if(typeof global.fetch === "undefined"){
   logger.warn("Native fetch function is not defined.");
   logger.warn("Installing a fetch polyfill.");
-  logger.warn("We strongly recommend you upgrading Node.js to v18 or higher.");
+
+  polyfillCount++;
 
   global.fetch = require("undici").fetch;
 }
@@ -31,9 +34,51 @@ if(typeof global.fetch === "undefined"){
 if(typeof global.structuredClone === "undefined"){
   logger.warn("Native structuredClone function is not defined.");
   logger.warn("Installing a structuredClone polyfill.");
-  logger.warn("We strongly recommend you upgrading Node.js to v18 or higher.");
+
+  polyfillCount++;
 
   global.structuredClone = function structuredClone<T>(value: T){
     return JSON.parse(JSON.stringify(value));
   };
 }
+
+if(typeof global.ReadableStream === "undefined"){
+  logger.warn("Native ReadableStream class is not globally defined.");
+  logger.warn("Setting up ReadableStream object imported from stream/web standard module.");
+
+  polyfillCount++;
+
+  global.ReadableStream = require("stream/web").ReadableStream;
+}
+
+if(typeof Array.prototype.findLastIndex === "undefined"){
+  logger.warn("Native Array.prototype.findLastIndex function is not defined.");
+  logger.warn("Installing a findLastIndex polyfill.");
+
+  polyfillCount++;
+
+  Array.prototype.findLastIndex = function findLastIndex<T>(callback: (value: T, index: number, array: T[]) => boolean, thisArg?: any): number{
+    for(let i = this.length - 1; i >= 0; i--){
+      if(callback.call(thisArg, this[i], i, this)){
+        return i;
+      }
+    }
+
+    return -1;
+  };
+}
+
+if(polyfillCount > 0){
+  logger.warn(`Installed ${polyfillCount} polyfill(s), which means Node.js may be stale.`);
+  logger.warn("We strongly recommend you upgrading Node.js to v18 at least or higher.");
+}
+
+logger.debug("Patching @distube/ytdl-core to handle upcoming videos correctly.");
+const dYtdlUtils = require("@distube/ytdl-core/lib/utils");
+const originalPlayError = dYtdlUtils.playError;
+dYtdlUtils.playError = function playError(...args: any[]){
+  if(args[0]?.playabilityStatus?.status === "LIVE_STREAM_OFFLINE"){
+    args[0].playabilityStatus.status += "_REPLACED";
+  }
+  return originalPlayError.apply(this, args);
+};

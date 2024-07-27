@@ -94,3 +94,102 @@ Node.js v16以上の環境で動作することを想定していますが、で
 * Dockerのイメージは、リリース後10～20分程度で公開されます。
 
 ---
+
+# v4.3.3
+## バグ修正
+* 一部のソースで、音楽ソースの内容を正しく判断できず再生に失敗する問題を修正(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2455)
+* 均等再生機能を使用するとクラッシュする場合がある問題を修正(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2470)
+* 大文字にするとコマンドが使えない問題を修正(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2472)
+* エラー発生時に、特定の条件下で長文のエラーメッセージが表示される問題を修正(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2473)
+* v4.3.0で導入された遅延メッセージ関連の機能をリファクタリングし、数々のバグを改善(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2474)
+* 非公開の音楽ソースのURL等が漏洩する可能性のある問題を修正(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2475)
+* キュー追加位置の算出に問題があったため修正(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2477)
+## 依存関係のアップデート
+* comment-json 4.2.3 => 4.2.4
+* https-proxy-agent 7.0.4 => 7.0.5
+* spotify-url-info 3.2.15 => 3.2.16
+## その他の特記事項
+* Node.jsは、最新のLTSのバージョンをご利用いただくことを強く推奨しています。v16以上であれば動作はしますが、一部機能が制限されることがあります。詳しくは[こちら](https://web.usamyon.moe/Discord-SimpleMusicBot/docs/next/setup/support#nodejs%E3%81%AE%E3%83%90%E3%83%BC%E3%82%B8%E3%83%A7%E3%83%B3%E3%81%AB%E3%82%88%E3%82%8B%E6%A9%9F%E8%83%BD%E3%81%AE%E9%81%95%E3%81%84)をご覧ください。
+* Dockerのイメージは、リリース後10～20分程度で公開されます。
+
+---
+
+# v4.3.4
+## バグ修正
+* 一部のソースの再生が機能しなくなったのを暫定的に修正(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2479, https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2482)
+  * 今回の修正は暫定的な修正のため、以下の問題があります。
+    * フレーム機能など一部の機能が機能しません。
+    * 再生までに通常より長く時間がかかります。
+  * 実際の修正は、提供可能になり次第パッチリリースとして再度提供する予定です。
+* ドキュメントのリンクを修正(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2481)
+## その他の特記事項
+* Node.jsは、最新のLTSのバージョンをご利用いただくことを強く推奨しています。v16以上であれば動作はしますが、一部機能が制限されることがあります。詳しくは[こちら](https://web.usamyon.moe/Discord-SimpleMusicBot/docs/next/setup/support#nodejs%E3%81%AE%E3%83%90%E3%83%BC%E3%82%B8%E3%83%A7%E3%83%B3%E3%81%AB%E3%82%88%E3%82%8B%E6%A9%9F%E8%83%BD%E3%81%AE%E9%81%95%E3%81%84)をご覧ください。
+* Dockerのイメージは、リリース後10～20分程度で公開されます。
+
+---
+
+# v4.3.5
+## バグ修正
+* 一部のソースの再生が機能しなくなったのを暫定的に修正(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2484, https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2491)
+  * 暫定的・応急的な修正の第二弾です。
+  * 再生まで通常より長く時間がかかるなどの問題が発生する可能性があります。
+  * 追加の修正を行い次第、パッチリリースを再度提供する予定です。
+* エラー発生時にメッセージが荒れる問題を修正(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2485)
+* 一部の条件下でキューに曲を追加できない問題を修正(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2492)
+## 依存関係のアップデート
+* libsodium-wrappers 0.7.13 => 0.7.14
+## その他の特記事項
+* Node.jsは、最新のLTSのバージョンをご利用いただくことを強く推奨しています。v16以上であれば動作はしますが、一部機能が制限されることがあります。詳しくは[こちら](https://web.usamyon.moe/Discord-SimpleMusicBot/docs/next/setup/support#nodejs%E3%81%AE%E3%83%90%E3%83%BC%E3%82%B8%E3%83%A7%E3%83%B3%E3%81%AB%E3%82%88%E3%82%8B%E6%A9%9F%E8%83%BD%E3%81%AE%E9%81%95%E3%81%84)をご覧ください。
+* Dockerのイメージは、リリース後10～20分程度で公開されます。
+
+---
+
+# v4.3.6
+本修正に取り組む予定ではありますが、現時点で都合により数週間ほど着手できないことがわかっているので、現時点までに実装したバグ修正をリリースします。（そのため今回のリリースも応急パッチの扱いとなります。）
+## バグ修正
+* 一定の条件下で、プレイリスト追加時のサムネイルが表示されない問題を修正(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2495)
+* 一定の条件下で、エラー発生時にその旨のメッセージが送信されないことがある問題を修正(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2498)
+* エラー発生時に、キャッシュを確実にクリアするよう修正(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2503)
+* ラジオ機能使用時に、ラジオ機能によって追加された曲と思われる場合のみ、キューに曲が追加されるよう修正(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2504)
+  * 完全な判定ではないため、一定の条件下で、ラジオ機能によって追加された曲でなくても曲が追加されることがあります~~が、誤差ということでご理解ください~~。
+* 一部のソースの再生が機能しなくなったのを暫定的に修正後、一部の環境で再生が安定しない問題を緩和(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2507, https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2511)
+* `ログ`コマンドで、依存関係のパッケージのバージョンが正しく表示されない問題を修正(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2509)
+## ドキュメント
+* ドキュメントの継続的な更新(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2496)
+## 依存関係のアップデート
+* i18next 23.11.5 => 23.12.1
+## その他の特記事項
+* Node.jsは、最新のLTSのバージョンをご利用いただくことを強く推奨しています。v16以上であれば動作はしますが、一部機能が制限されることがあります。詳しくは[こちら](https://web.usamyon.moe/Discord-SimpleMusicBot/docs/next/setup/support#nodejs%E3%81%AE%E3%83%90%E3%83%BC%E3%82%B8%E3%83%A7%E3%83%B3%E3%81%AB%E3%82%88%E3%82%8B%E6%A9%9F%E8%83%BD%E3%81%AE%E9%81%95%E3%81%84)をご覧ください。
+* Dockerのイメージは、リリース後10～20分程度で公開されます。
+
+---
+
+# v4.3.7
+## バグ修正
+* ラジオ機能がうまく動作していない問題を修正(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2513)
+## その他の特記事項
+* Node.jsは、最新のLTSのバージョンをご利用いただくことを強く推奨しています。v16以上であれば動作はしますが、一部機能が制限されることがあります。詳しくは[こちら](https://web.usamyon.moe/Discord-SimpleMusicBot/docs/next/setup/support#nodejs%E3%81%AE%E3%83%90%E3%83%BC%E3%82%B8%E3%83%A7%E3%83%B3%E3%81%AB%E3%82%88%E3%82%8B%E6%A9%9F%E8%83%BD%E3%81%AE%E9%81%95%E3%81%84)をご覧ください。
+* Dockerのイメージは、リリース後10～20分程度で公開されます。
+
+---
+
+# v4.3.8
+## バグ修正
+* 一部のソースの再生が機能しなくなったのを暫定的に修正(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2534, https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2537)
+  * 引き続き必要に応じて修正パッチをリリースしていきます。
+* `この曲で終了`コマンドの表示を修正(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2535)
+* ラジオ機能で再生失敗が複数回起きた時などにキューが無限に長くなる問題を修正(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2538)
+## ドキュメント
+* ドキュメント上でサポートされている Node.js のバージョンを更新(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2518)
+  * 正確にいつからかはわからないですが、v16.16以前のバージョンでも動作するようになっています。
+  * 現在、ボットの動作に必要な最低限の Node.js のバージョンは v16.4 です。
+* ドキュメントの継続的な更新(https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2526, https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/pull/2527)
+## 依存関係のアップデート
+* oceanic.js 1.10.0 => 1.11.1
+* i18next 23.12.1 => 23.12.2
+* @sinclair/typebox 0.32.34 => 0.32.35
+## その他の特記事項
+* Node.jsは、最新のLTSのバージョンをご利用いただくことを強く推奨しています。v16以上であれば動作はしますが、一部機能が制限されることがあります。詳しくは[こちら](https://web.usamyon.moe/Discord-SimpleMusicBot/docs/next/setup/support#nodejs%E3%81%AE%E3%83%90%E3%83%BC%E3%82%B8%E3%83%A7%E3%83%B3%E3%81%AB%E3%82%88%E3%82%8B%E6%A9%9F%E8%83%BD%E3%81%AE%E9%81%95%E3%81%84)をご覧ください。
+* Dockerのイメージは、リリース後10～20分程度で公開されます。
+
+---

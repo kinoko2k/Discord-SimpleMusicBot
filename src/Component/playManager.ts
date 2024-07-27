@@ -19,7 +19,7 @@
 import type { AudioSource } from "../AudioSource";
 import type { GuildDataContainer } from "../Structure";
 import type { AudioPlayer } from "@discordjs/voice";
-import type { TextChannel, Member, Message } from "oceanic.js";
+import type { AnyTextableGuildChannel, TextChannel, Member, Message } from "oceanic.js";
 import type { Readable } from "stream";
 
 import { NoSubscriberBehavior } from "@discordjs/voice";
@@ -29,6 +29,7 @@ import i18next from "i18next";
 import { MessageFlags } from "oceanic.js";
 
 import { FixedAudioResource } from "./audioResource";
+import { DeferredMessage } from "./deferredMessage";
 import { resolveStreamToPlayable } from "./streams";
 import { DSL } from "./streams/dsl";
 import { Normalizer } from "./streams/normalizer";
@@ -199,10 +200,9 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
     this.emit("playPreparing", time);
     this.preparing = true;
 
-    let messageIsSending = false;
-    let messageSendingTimeout: NodeJS.Timeout | null = null;
     let messageSendingScheduledAt: number | null = null;
-    let message: Message | null = null;
+    let message: DeferredMessage | Message | null = null;
+
     this._currentAudioInfo = this.server.queue.get(0).basicInfo;
 
     const [min, sec] = Util.time.calcMinSec(this.currentAudioInfo!.lengthSeconds);
@@ -250,32 +250,33 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
       this.preparing = true;
     }else if(this.getNoticeNeeded() && !quiet && this.server.preferences.nowPlayingNotificationLevel !== NowPlayingNotificationLevel.Disable){
       // 通知メッセージを送信する（可能なら）
-      // このとき、即時には送信せずに、3秒間の猶予を儲ける
-      messageSendingTimeout = setTimeout(async () => {
-        messageIsSending = true;
-        message = await this.server.bot.client.rest.channels.createMessage(
-          this.server.boundTextChannel,
-          {
-            content: `:hourglass_flowing_sand:${
-              i18next.t("components:play.preparing", {
-                title: `\`${this.currentAudioInfo!.title}\` \`(${
-                  isLive ? i18next.t("liveStream", { lng: this.server.locale }) : `${min}:${sec}`
-                })\``,
-                lng: this.server.locale,
-              })
-            }...`,
-            flags: this.server.preferences.nowPlayingNotificationLevel === NowPlayingNotificationLevel.Silent
-              ? MessageFlags.SUPPRESS_NOTIFICATIONS
-              : 0,
-          }
-        ).catch(er => {
-          this.logger.error(er);
-          return null;
-        });
-        messageIsSending = false;
-      }, 2.5e3).unref();
+      message = DeferredMessage.create(
+        this.server.bot.client.getChannel<AnyTextableGuildChannel>(this.server.boundTextChannel)
+        || await this.server.bot.client.rest.channels.get<AnyTextableGuildChannel>(this.server.boundTextChannel),
+        2.5e3,
+        {
+          content: `:hourglass_flowing_sand:${
+            i18next.t("components:play.preparing", {
+              title: `\`${this.currentAudioInfo!.title}\` \`(${
+                isLive ? i18next.t("liveStream", { lng: this.server.locale }) : `${min}:${sec}`
+              })\``,
+              lng: this.server.locale,
+            })
+          }...`,
+          flags: this.server.preferences.nowPlayingNotificationLevel === NowPlayingNotificationLevel.Silent
+            ? MessageFlags.SUPPRESS_NOTIFICATIONS
+            : 0,
+        }
+      )
+        .on("error", this.logger.error)
+        .on("debug", this.logger.debug);
       messageSendingScheduledAt = Date.now();
     }
+
+    // try...catchブロックに入る前に、エラーレポートチャンネルを決定しておく
+    this._errorReportChannel = (message?.channel as TextChannel | undefined)
+        || this.server.bot.client.getChannel<TextChannel>(this.server.boundTextChannel)
+        || await this.server.bot.client.rest.channels.get<TextChannel>(this.server.boundTextChannel);
 
     try{
       // シーク位置を確認
@@ -310,9 +311,6 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
       }
 
       // 各種準備
-      this._errorReportChannel = (message?.channel as TextChannel | undefined)
-        || this.server.bot.client.getChannel<TextChannel>(this.server.boundTextChannel)
-        || await this.server.bot.client.rest.channels.get<TextChannel>(this.server.boundTextChannel);
       this._cost = cost;
       this._lastMember = null;
       this.prepareAudioPlayer();
@@ -344,14 +342,22 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
       this.setVolume(this.volume);
 
       // wait for player entering the playing state
-      const waitingSucceeded = await entersState(this._player!, AudioPlayerStatus.Playing, 10e3)
+      const waitingSucceeded = await entersState(this._player!, AudioPlayerStatus.Playing, 30e3)
         .then(() => true)
         .catch(() => false);
+
+      if(this._player?.state.status === AudioPlayerStatus.Buffering){
+        throw new Error("Resource timeout exceeded.");
+      }
 
       // when occurring one or more error(s) while waiting for player,
       // the error(s) should be also emitted from AudioPlayer and handled by PlayManager#handleError
       // so simply ignore the error(s) here.
       if(!waitingSucceeded){
+        if(message instanceof DeferredMessage){
+          message.cancelSchedule();
+        }
+
         return this;
       }
 
@@ -362,44 +368,26 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
       this.logger.info("Playback started successfully");
 
       // 現在再生中パネルを送信していい環境な場合に以下のブロックを実行する
-      if(messageSendingTimeout){
+      if(message){
         // 再生開始メッセージ
         const messageContent = this.createNowPlayingMessage();
 
-        clearTimeout(messageSendingTimeout);
-
-        // 送信されかけているなら送信完了まで待つ
-        if(!message && messageIsSending){
-          await Util.waitForEnteringState(() => !messageIsSending, 10e3, { rejectOnTimeout: false });
-        }
-
         this.logger.debug(`Preparing elapsed time: ${Date.now() - messageSendingScheduledAt!}ms`);
 
-        if(message){
-          // すでに送信されているメッセージがある場合それを利用する
-          message.edit(messageContent).catch(this.logger.error);
-        }else{
-          // メッセージが送信されていないなら新規で作成する。
-          message = await this.server.bot.client.rest.channels.createMessage(
-            this.server.boundTextChannel,
-            {
-              ...messageContent,
-              flags: this.server.preferences.nowPlayingNotificationLevel === NowPlayingNotificationLevel.Silent
-                ? MessageFlags.SUPPRESS_NOTIFICATIONS
-                : 0,
-            },
-          ).catch(er => {
-            this.logger.error(er);
-            return null;
-          });
-        }
+        const replyMessage = await message.edit({
+          ...messageContent,
+          flags: this.server.preferences.nowPlayingNotificationLevel === NowPlayingNotificationLevel.Silent
+            ? MessageFlags.SUPPRESS_NOTIFICATIONS
+            : 0,
+        }).catch(er => {
+          this.logger.error(er);
+          return null;
+        });
 
         // エラー等でmessageがnullになっている場合は何もしない
-        if(message){
-          const _localMessage = message;
-
+        if(replyMessage){
           this.eitherOnce(["playCompleted", "handledError", "stop"], () => {
-            _localMessage.edit({
+            replyMessage.edit({
               components: [],
             }).catch(this.logger.error);
           });
@@ -407,7 +395,11 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
       }
 
       // ラジオが有効になっている場合、次の曲を準備する
-      if(this.server.queue.mixPlaylistEnabled){
+      if(
+        this.server.queue.mixPlaylistEnabled
+        && this.server.queue.get(0).additionalInfo.addedBy.userId === "2"
+        && this.server.queue.filter(item => item.additionalInfo.addedBy.userId === "2").length <= 2
+      ){
         await this.server.queue.prepareNextMixItem();
       }
 
@@ -421,6 +413,10 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
       }
     }
     catch(e){
+      if(message instanceof DeferredMessage){
+        message.cancelSchedule();
+      }
+
       this.handleError(e).catch(this.logger.error);
     }
     finally{
@@ -441,7 +437,13 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
     );
     /* eslint-disable @typescript-eslint/indent */
     const embed = new MessageEmbedBuilder()
-      .setTitle(`:cd: ${i18next.t("components:nowplaying.nowplayingTitle", { lng: this.server.locale })} :musical_note:`)
+      .setTitle(
+        `:cd: ${
+          i18next.t("components:nowplaying.nowplayingTitle", { lng: this.server.locale })
+        }${
+          this.currentAudioInfo.isYouTube() ? this.currentAudioInfo.getStrategyIndicator() : ""
+        } :musical_note:`
+      )
       .setDescription(
         (
           this.currentAudioInfo.isPrivateSource
@@ -495,14 +497,13 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
     }
 
     /* eslint-enable @typescript-eslint/indent */
+
     if(this.currentAudioInfo.isYouTube()){
       if(this.currentAudioInfo.isFallbacked){
         embed.addField(
           `:warning: ${i18next.t("attention", { lng: this.server.locale })}`,
           i18next.t("components:queue.fallbackNotice", { lng: this.server.locale })
         );
-      }else if(this.currentAudioInfo.strategyId === 1){
-        embed.setTitle(`${embed.title}*`);
       }
     }
 
@@ -723,6 +724,7 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
         return;
       }
     }
+
     await this._errorReportChannel?.createMessage({
       content: `:tired_face:${i18next.t("components:play.failedToPlay", { lng: this.server.locale })}`
         + (
@@ -855,13 +857,13 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
     this.emit("playFailed");
     this._cost = 0;
     this.destroyStream();
+    this.currentAudioInfo!.purgeCache();
 
     if(this._errorUrl === this.currentAudioInfo!.url && !quiet){
       this._errorCount++;
     }else{
       this._errorCount = 1;
       this._errorUrl = this.currentAudioInfo!.url;
-      this.currentAudioInfo!.purgeCache();
     }
 
     this.logger.warn(`Playback failed (${this._errorCount}times)`);

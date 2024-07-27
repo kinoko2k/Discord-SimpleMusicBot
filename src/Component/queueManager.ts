@@ -21,7 +21,7 @@ import type { TaskCancellationManager } from "./taskCancellationManager";
 import type { AudioSourceBasicJsonFormat } from "../AudioSource";
 import type { GuildDataContainer } from "../Structure";
 import type { AddedBy, QueueContent } from "../types/QueueContent";
-import type { AnyTextableGuildChannel, EditMessageOptions, Message, MessageActionRow } from "oceanic.js";
+import type { AnyTextableGuildChannel, EditMessageOptions, MessageActionRow } from "oceanic.js";
 
 import { lock, LockObj } from "@mtripg6666tdr/async-lock";
 import { CommandMessage as LibCommandMessage } from "@mtripg6666tdr/oceanic-command-resolver";
@@ -29,9 +29,9 @@ import { MessageActionRowBuilder, MessageButtonBuilder, MessageEmbedBuilder } fr
 import i18next from "i18next";
 import { Member } from "oceanic.js";
 import ytmpl from "yt-mix-playlist";
-import ytdl from "ytdl-core";
 
 import { ResponseMessage } from "./commandResolver/ResponseMessage";
+import { DeferredMessage } from "./deferredMessage";
 import * as AudioSource from "../AudioSource";
 import { getCommandExecutionContext } from "../Commands";
 import { ServerManagerBase } from "../Structure";
@@ -209,7 +209,7 @@ export class QueueManager extends ServerManagerBase<QueueManagerEvents> {
     preventSourceCache = false,
   }: {
     url: string,
-    addedBy?: Member | AddedBy | null,
+    addedBy?: Member | Partial<AddedBy> | null,
     method?: "push" | "unshift",
     sourceType?: KnownAudioSourceIdentifer,
     gotData?: T | null,
@@ -245,7 +245,7 @@ export class QueueManager extends ServerManagerBase<QueueManagerEvents> {
 
         this.emit(method === "push" ? "changeWithoutCurrent" : "change");
         this.emit("add", result);
-        const index = this._default.findIndex(q => q === result);
+        const index = method === "push" ? this._default.findLastIndex(q => q === result) : this._default.findIndex(q => q === result);
         this.logger.info(`queue content added at position ${index}`);
         return { ...result, index };
       }
@@ -285,9 +285,7 @@ export class QueueManager extends ServerManagerBase<QueueManagerEvents> {
 
     const { t } = getCommandExecutionContext();
 
-    let uiMessage: Message<AnyTextableGuildChannel> | LibCommandMessage | ResponseMessage | null = null;
-    let uiMessageTimeout: NodeJS.Timeout | null = null;
-    let uiMessageSending = false;
+    let uiMessage: DeferredMessage | ResponseMessage | null = null;
 
     try{
       // UI表示するためのメッセージを特定する作業
@@ -311,32 +309,21 @@ export class QueueManager extends ServerManagerBase<QueueManagerEvents> {
       }else if(options.message){
         // すでに処理中メッセージがある場合
         this.logger.info("AutoAddQueue will report statuses to the specified message");
-        const optionsMessage = uiMessage = options.message;
-        if(optionsMessage instanceof LibCommandMessage){
-          uiMessageTimeout = setTimeout(async () => {
-            uiMessageSending = true;
-            uiMessage = await optionsMessage.reply({
-              content: t("loadingInfoPleaseWait"),
-            }).catch(er => {
-              this.logger.error(er);
-              return null;
-            });
-            uiMessageSending = false;
-          }, 2e3).unref();
-        }
+
+        uiMessage = options.message instanceof LibCommandMessage
+          ? DeferredMessage.create(options.message, 2e3, {
+            content: t("loadingInfoPleaseWait"),
+          })
+            .on("error", this.logger.error)
+            .on("debug", this.logger.debug)
+          : options.message;
       }else if(options.channel){
         // まだないの場合（新しくUI用のメッセージを生成する）
         this.logger.info("AutoAddQueue will make a message that will be used to report statuses");
-        uiMessageTimeout = setTimeout(async () => {
-          uiMessageSending = true;
-          uiMessage = await options.channel.createMessage({
-            content: t("loadingInfoPleaseWait"),
-          }).catch(er => {
-            this.logger.error(er);
-            return null;
-          });
-          uiMessageSending = false;
-        }, 2e3).unref();
+
+        uiMessage = DeferredMessage.create(options.channel, 2e3, {
+          content: t("loadingInfoPleaseWait"),
+        }).on("error", this.logger.error);
       }
 
       // キューの長さ確認
@@ -365,15 +352,15 @@ export class QueueManager extends ServerManagerBase<QueueManagerEvents> {
       this.logger.info("AutoAddQueue worked successfully");
 
       // UIを表示する
-      if(uiMessageTimeout || uiMessage){
+      if(uiMessage){
         // 曲の時間取得＆計算
-        const _t = Number(info.basicInfo.lengthSeconds);
-        const [min, sec] = Util.time.calcMinSec(_t);
+        const trackLengthSeconds = Number(info.basicInfo.lengthSeconds);
+        const [min, sec] = Util.time.calcMinSec(trackLengthSeconds);
         // キュー内のオフセット取得
         const index = info.index.toString();
         // ETAの計算
         const timeFragments = Util.time.calcHourMinSec(
-          this.getLengthSecondsTo(info.index) - _t - Math.floor(this.server.player.currentTime / 1000)
+          this.getLengthSecondsTo(info.index) - trackLengthSeconds - Math.floor(this.server.player.currentTime / 1000)
         );
         // 埋め込みの作成
         const embed = new MessageEmbedBuilder()
@@ -384,7 +371,7 @@ export class QueueManager extends ServerManagerBase<QueueManagerEvents> {
             t("length"),
             info.basicInfo.isYouTube() && info.basicInfo.isLiveStream
               ? t("liveStream")
-              : _t !== 0
+              : trackLengthSeconds !== 0
                 ? min + ":" + sec
                 : t("unknown"),
             true
@@ -460,8 +447,8 @@ export class QueueManager extends ServerManagerBase<QueueManagerEvents> {
 
           collectorCreateResult.collector.once("cancelLast", interaction => {
             try{
-              const item = this.get(this.length - 1);
-              this.removeAt(this.length - 1);
+              const item = this.get(info.index);
+              this.removeAt(info.index);
               interaction.createFollowup({
                 content: `🚮${t("components:queue.cancelAdded", { title: item.basicInfo.title })}`,
               }).catch(this.logger.error);
@@ -506,38 +493,26 @@ export class QueueManager extends ServerManagerBase<QueueManagerEvents> {
           };
         }
 
-        if(uiMessageTimeout){
-          clearTimeout(uiMessageTimeout);
+        const lastReply = await uiMessage.edit(messageContent).catch(this.logger.error);
+
+        if(lastReply){
+          collector?.setMessage(lastReply);
         }
-
-        if(uiMessageSending){
-          await Util.waitForEnteringState(() => !uiMessageSending, 10e3, { rejectOnTimeout: false });
-        }
-
-        const lastReply: Message<AnyTextableGuildChannel> | ResponseMessage = uiMessage
-          ? uiMessage instanceof LibCommandMessage
-            ? await uiMessage.reply(messageContent)
-            : await uiMessage.edit(messageContent)
-          : await options.channel!.createMessage(messageContent);
-
-        collector?.setMessage(lastReply);
       }
       return info;
     }
     catch(e){
       this.logger.error("AutoAddQueue failed", e);
       if(uiMessage){
-        const errorMessage = Util.stringifyObject(e);
+        const errorMessage = "message" in e && typeof e.message === "string"
+          ? e.message
+          : Util.filterContent(Util.stringifyObject(e));
         const errorMessageContent = {
           content: `:weary: ${t("components:queue.failedToAdd")}${errorMessage ? `(${errorMessage})` : ""}`,
           embeds: [],
         };
 
-        if(uiMessage instanceof LibCommandMessage){
-          uiMessage.reply(errorMessageContent).catch(this.logger.error);
-        }else{
-          uiMessage.edit(errorMessageContent).catch(this.logger.error);
-        }
+        uiMessage.edit(errorMessageContent).catch(this.logger.error);
       }
       return null;
     }
@@ -645,23 +620,30 @@ export class QueueManager extends ServerManagerBase<QueueManagerEvents> {
     this.emit("change");
   }
 
-  async enableMixPlaylist(url: string, request: Member, skipAddingBase: boolean = false){
-    this._mixPlaylist = await ytmpl(ytdl.getURLVideoID(url), {
+  async enableMixPlaylist(videoId: string, request: Member, skipAddingBase: boolean = false){
+    this._mixPlaylist = await ytmpl(videoId, {
       gl: config.country,
       hl: config.defaultLanguage,
     });
+
+    if(!this.mixPlaylistEnabled){
+      return false;
+    }
+
     if(!skipAddingBase){
       await this.addQueueOnly({
-        url: url,
+        url: `https://www.youtube.com/watch?v=${videoId}`,
         addedBy: request,
         method: "push",
         sourceType: "youtube",
       });
-    }else{
-      await this.prepareNextMixItem();
     }
+
+    await this.prepareNextMixItem();
     await this.prepareNextMixItem();
     this.server.player.once("disconnect", this.disableMixPlaylist);
+
+    return true;
   }
 
   async prepareNextMixItem(): Promise<void> {
@@ -679,7 +661,9 @@ export class QueueManager extends ServerManagerBase<QueueManagerEvents> {
 
       await this.addQueueOnly({
         url: item.url,
-        addedBy: null,
+        addedBy: {
+          userId: "2",
+        },
         method: "push",
         sourceType: "youtube",
         gotData: {
@@ -821,28 +805,35 @@ export class QueueManager extends ServerManagerBase<QueueManagerEvents> {
    * 追加者によってできるだけ交互になるようにソートします
    */
   sortByAddedBy(addedByUsers?: string[]){
+    const firstItem = this._default[0];
+
+    if(!firstItem) return;
+
     // 追加者の一覧とマップを作成
     const generateUserOrder = !addedByUsers;
     addedByUsers = addedByUsers || [];
-    const queueByAdded = {} as { [key: string]: QueueContent[] };
+    const queueByAdded = new Map<string, QueueContent[]>();
     for(let i = 0; i < this._default.length; i++){
-      if(!addedByUsers.includes(this._default[i].additionalInfo.addedBy.userId)){
-        if(generateUserOrder){
-          addedByUsers.push(this._default[i].additionalInfo.addedBy.userId);
-        }
-        queueByAdded[this._default[i].additionalInfo.addedBy.userId] = [this._default[i]];
+      const item = this._default[i];
+      if(generateUserOrder && !addedByUsers.includes(item.additionalInfo.addedBy.userId)){
+        addedByUsers.push(item.additionalInfo.addedBy.userId);
+      }
+
+      if(queueByAdded.has(item.additionalInfo.addedBy.userId)){
+        queueByAdded.get(item.additionalInfo.addedBy.userId)!.push(item);
       }else{
-        queueByAdded[this._default[i].additionalInfo.addedBy.userId].push(this._default[i]);
+        queueByAdded.set(item.additionalInfo.addedBy.userId, [item]);
       }
     }
+
     // ソートをもとにキューを再構築
     const sorted = [] as QueueContent[];
-    const maxLengthByUser = Math.max(...addedByUsers.map(user => queueByAdded[user].length));
+    const maxLengthByUser = Math.max(...addedByUsers.map(userId => queueByAdded.get(userId)?.length || 0));
     for(let i = 0; i < maxLengthByUser; i++){
-      sorted.push(...addedByUsers.map(user => queueByAdded[user][i]).filter(q => !!q));
+      sorted.push(...addedByUsers.map(userId => queueByAdded.get(userId)?.[i]).filter(q => !!q));
     }
     this._default = sorted;
-    this.emit("changeWithoutCurrent");
+    this.emit(this._default[0] === firstItem ? "changeWithoutCurrent" : "change");
   }
 
   getRawQueueItems(){
@@ -853,7 +844,7 @@ export class QueueManager extends ServerManagerBase<QueueManagerEvents> {
     this._default.push(...items);
   }
 
-  protected getUserIdFromMember(member: Member | AddedBy){
+  protected getUserIdFromMember(member: Member | Partial<AddedBy>){
     return member instanceof Member ? member.id : member.userId;
   }
 }

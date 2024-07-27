@@ -61,6 +61,20 @@ export function stringifyObject(obj: any): string{
 }
 
 /**
+ * 与えられた文字列に、ファイルパスが含まれている場合、それを隠します。
+ * @param original 元の文字列
+ * @returns フィルター後の文字列
+ */
+export function filterContent(original: string){
+  const cwd = process.cwd();
+  return original
+    .replaceAll(cwd, "***")
+    .replace(/https?:\/\/[\w!?/+\-_~;.,*&@#$%()'[\]]+/g, "http:***")
+    .replace(/\\/g, "/")
+    .replace(/\*/g, "\\*");
+}
+
+/**
  * 空のPassThroughを生成します
  * @returns PassThrough
  */
@@ -482,6 +496,48 @@ export function requireIfAny(id: string): unknown {
 
     return null;
   }
+}
+
+interface UnsafeTraverseState<T> {
+  value: T;
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  getProperty: <U = any>(name: keyof T | (string & {})) => UnsafeTraverseState<U | undefined>;
+  select: <U = any>(selector: (current: T) => U | undefined | null) => UnsafeTraverseState<U | undefined>;
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  execute: <U extends keyof T | (string & {})>(func: U) => T extends undefined
+    ? () => UnsafeTraverseState<undefined>
+    : T extends { [key in U]: (...args: any[]) => any }
+      ? (...args: Parameters<T[U]>) => UnsafeTraverseState<ReturnType<T[U]>>
+      : (..._: any[]) => UnsafeTraverseState<undefined>;
+  action: (action: (value: T) => void) => UnsafeTraverseState<T>;
+}
+
+export function unsafeTraverseFrom<S>(obj: S){
+  const createState: <T = any> (value: T) => UnsafeTraverseState<T> = <T = any> (value: T) => ({
+    value,
+    getProperty: <U = any>(name: string) => value
+      ? createState<U | undefined>(value[name as keyof typeof value] as U | null | undefined || undefined)
+      : undefinedState,
+    select: <U = any>(selector: (current: T) => U | undefined | null) => value
+      ? createState<U | undefined>(selector(value) || undefined)
+      : undefinedState,
+    // eslint-disable-next-line @typescript-eslint/ban-types
+    execute: <U extends keyof T | (string & {})>(func: U) => (!value
+      ? () => undefinedState
+      // @ts-expect-error
+      : typeof value[func] === "function"
+        // @ts-expect-error
+        ? (...args: Parameters<T[U]>) => createState<ReturnType<T[U]>>(value[func](...args))
+        : (..._: any[]) => undefinedState) as any,
+    action: (action: (value: T) => void) => {
+      action(value);
+      return createState(value);
+    },
+  });
+
+  const undefinedState = createState(undefined);
+
+  return createState<S>(obj);
 }
 
 export function assertIs<T>(obj: unknown): asserts obj is T{}

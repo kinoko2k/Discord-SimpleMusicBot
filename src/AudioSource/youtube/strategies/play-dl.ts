@@ -117,7 +117,6 @@ export class playDlStrategy extends Strategy<Cache<playDl, InfoData>, InfoData> 
     if(info.video_details.upcoming) throw new Error("This video is still in upcoming");
     return {
       url,
-       
       title: info.video_details.title!,
       description: info.video_details.description || "",
       length: Number(info.video_details.durationInSec),

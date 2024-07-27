@@ -16,21 +16,24 @@
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
-import type { WithId, spawnerJobMessage, workerMessage } from "./spawner";
+import type { WithId, SpawnerGetInfoMessage, SpawnerJobMessage, SpawnerSearchMessage, WorkerMessage, SpawnerUpdateConfigMessage } from "./spawner";
+
+import "../../polyfill";
 
 import { parentPort } from "worker_threads";
 
 import ytsr from "ytsr";
 
 import { YouTube } from ".";
+import { updateStrategyConfiguration } from "./strategies";
 import { requireIfAny, stringifyObject } from "../../Util";
 import { getConfig } from "../../config";
+
+const dYtsr = requireIfAny("@distube/ytsr") as typeof import("@distube/ytsr");
 
 if(!parentPort){
   throw new Error("This file should be run in worker thread.");
 }
-
-const dYtsr = requireIfAny("@distube/ytsr") as typeof import("@distube/ytsr");
 
 const config = getConfig();
 const searchOptions = {
@@ -40,39 +43,38 @@ const searchOptions = {
 };
 
 parentPort.unref();
+parentPort.on("message", onMessage);
 
-function postMessage(message: workerMessage|WithId<workerMessage>){
+function postMessage(message: WorkerMessage | WithId<WorkerMessage>){
   parentPort!.postMessage(message);
 }
 
-function onMessage(message: WithId<spawnerJobMessage>){
-  if(!message){
-    return;
-  }
-  if(message.type === "init"){
-    const { id, url, prefetched, forceCache } = message;
-    const youtube = new YouTube();
-    youtube.init(url, prefetched, forceCache)
-      .then(() => {
-        const data = Object.assign({}, youtube);
-        // @ts-expect-error
-        delete data["logger"];
-        postMessage({
-          type: "initOk",
-          data,
-          id,
-        });
-      })
-      .catch((er) => {
-        postMessage({
-          type: "error",
-          data: stringifyObject(er),
-          id,
-        });
+function getInfo({ id, url, prefetched, forceCache }: WithId<SpawnerGetInfoMessage>){
+  const youtube = new YouTube();
+  youtube.init(url, prefetched, forceCache)
+    .then(() => {
+      const data = Object.assign({}, youtube);
+      // @ts-expect-error
+      delete data["logger"];
+      postMessage({
+        type: "initOk",
+        data,
+        id,
       });
-  }else if(message.type === "search"){
-    const id = message.id;
-    ytsr(message.keyword, searchOptions)
+    })
+    .catch((er) => {
+      postMessage({
+        type: "error",
+        data: stringifyObject(er),
+        id,
+      });
+    });
+}
+
+function search({ id, keyword }: WithId<SpawnerSearchMessage>){
+  if(dYtsr){
+    dYtsr(keyword, searchOptions)
+    // @ts-ignore
       .then(result => {
         postMessage({
           type: "searchOk",
@@ -80,32 +82,57 @@ function onMessage(message: WithId<spawnerJobMessage>){
           id,
         });
       })
-      .catch((er) => {
-        console.error(er);
-        if(dYtsr){
-          return dYtsr(message.keyword, searchOptions);
-        }else{
-          throw er;
-        }
+      // @ts-ignore
+      .catch((err) => {
+        console.error(err);
+
+        return ytsr(keyword, searchOptions);
       })
-      .then(result => {
-        if(result){
-          postMessage({
-            type: "searchOk",
-            data: result,
-            id,
-          });
-        }
-      })
-      .catch((er) => {
+      // @ts-ignore
+      .catch(err => {
         postMessage({
           type: "error",
-          data: stringifyObject(er),
+          data: stringifyObject(err),
           id,
         });
-      })
-    ;
+      });
   }
+
+  ytsr(keyword, searchOptions)
+    .then(result => {
+      postMessage({
+        type: "searchOk",
+        data: result,
+        id,
+      });
+    })
+    .catch((err) => {
+      postMessage({
+        type: "error",
+        data: stringifyObject(err),
+        id,
+      });
+    });
 }
 
-parentPort.on("message", onMessage);
+function updateConfig({ config: newConfig }: WithId<SpawnerUpdateConfigMessage>){
+  updateStrategyConfiguration(newConfig);
+}
+
+function onMessage(message: WithId<SpawnerJobMessage>){
+  if(!message){
+    return;
+  }
+
+  switch(message.type){
+    case "init":
+      getInfo(message);
+      break;
+    case "search":
+      search(message);
+      break;
+    case "updateConfig":
+      updateConfig(message);
+      break;
+  }
+}
