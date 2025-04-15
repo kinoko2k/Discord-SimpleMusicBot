@@ -1,18 +1,18 @@
 /*
- * Copyright 2021-2024 mtripg6666tdr
- * 
- * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
+ * Copyright 2021-2025 mtripg6666tdr
+ *
+ * This file is part of mtripg6666tdr/Discord-SimpleMusicBot.
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
- * 
- * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it 
- * under the terms of the GNU General Public License as published by the Free Software Foundation, 
+ *
+ * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  *
- * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot. 
+ * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot.
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
@@ -27,29 +27,29 @@ import { QueueManagerWithBgm } from "../Component/queueManagerWithBGM";
 
 export class GuildDataContainerWithBgm extends GuildDataContainer {
   protected override _queue: QueueManagerWithBgm;
-  override get queue(){
+  override get queue() {
     return this._queue;
   }
 
   protected override _player: PlayManagerWithBgm;
-  override get player(){
+  override get player() {
     return this._player;
   }
 
   protected _bgmConfig: GuildBGMContainerType;
-  get bgmConfig(): Readonly<GuildBGMContainerType>{
+  get bgmConfig(): Readonly<GuildBGMContainerType> {
     return this._bgmConfig;
   }
 
-  protected override initPlayManager(){
+  protected override initPlayManager() {
     this._player = new PlayManagerWithBgm(this);
   }
 
-  protected override initQueueManager(){
+  protected override initQueueManager() {
     this._queue = new QueueManagerWithBgm(this);
   }
 
-  constructor(guildid: string, boundchannelid: string, bot: MusicBotBase, bgmConfig: GuildBGMContainerType){
+  constructor(guildid: string, boundchannelid: string, bot: MusicBotBase, bgmConfig: GuildBGMContainerType) {
     super(guildid, boundchannelid, bot);
     this._bgmConfig = bgmConfig;
   }
@@ -57,10 +57,10 @@ export class GuildDataContainerWithBgm extends GuildDataContainer {
   /**
    * BGM設定が存在する場合に、BGM設定を完了します
    */
-  async initBgmTracks(){
-    if(this.bgmConfig){
+  async initBgmTracks() {
+    if (this.bgmConfig) {
       const { items } = this.bgmConfig;
-      for(let i = 0; i < items.length; i++){
+      for (let i = 0; i < items.length; i++) {
         await this.queue.addQueueOnly({
           url: items[i],
           addedBy: {
@@ -80,9 +80,9 @@ export class GuildDataContainerWithBgm extends GuildDataContainer {
     }
   }
 
-  playBgmTracks(){
-    if(!this.bgmConfig) throw new Error("no bgm configuration found!");
-    if(!this.bgmConfig.enableQueueLoop){
+  playBgmTracks() {
+    if (!this.bgmConfig) throw new Error("no bgm configuration found!");
+    if (!this.bgmConfig.enableQueueLoop) {
       this.queue.resetBgmTracks();
     }
     return this.joinVoiceChannelOnly(this.bgmConfig.voiceChannelId)

@@ -1,18 +1,18 @@
 /*
- * Copyright 2021-2024 mtripg6666tdr
- * 
- * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
+ * Copyright 2021-2025 mtripg6666tdr
+ *
+ * This file is part of mtripg6666tdr/Discord-SimpleMusicBot.
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
- * 
- * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it 
- * under the terms of the GNU General Public License as published by the Free Software Foundation, 
+ *
+ * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  *
- * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot. 
+ * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot.
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
@@ -29,27 +29,26 @@ import { getConfig } from "../config";
 
 const config = getConfig();
 
-export async function onMessageCreate(this: MusicBot, message: discord.Message){
-  if(this.maintenance && !config.isBotAdmin(message.author.id)){
+export async function onMessageCreate(this: MusicBot, message: discord.Message) {
+  if (this.maintenance && !config.isBotAdmin(message.author.id)) {
     return;
   }
 
-
-  if(!this["_isReadyFinished"] || message.author.bot || !message.channel || !message.member || !message.inCachedGuildChannel()){
+  if (!this["_isReadyFinished"] || message.author.bot || !message.channel || !message.member || !message.inCachedGuildChannel()) {
     return;
   }
 
-  if(
+  if (
     message.channel.type !== discord.ChannelTypes.GUILD_TEXT
     && message.channel.type !== discord.ChannelTypes.PRIVATE_THREAD
     && message.channel.type !== discord.ChannelTypes.PUBLIC_THREAD
     && message.channel.type !== discord.ChannelTypes.GUILD_STAGE_VOICE
     && message.channel.type !== discord.ChannelTypes.GUILD_VOICE
-  ){
+  ) {
     return;
   }
 
-  if(this._rateLimitController.isLimited(message.member.id)){
+  if (this._rateLimitController.isLimited(message.member.id)) {
     return;
   }
 
@@ -57,19 +56,19 @@ export async function onMessageCreate(this: MusicBot, message: discord.Message){
   const server = this.upsertData(message.guildID, message.channel.id);
   // プレフィックスの更新
   server.updatePrefix(message as discord.Message<discord.TextChannel>);
-  if(message.content === this.mentionText){
-    if(this._rateLimitController.pushEvent(message.member.id)){
+  if (message.content === this.mentionText) {
+    if (this._rateLimitController.pushEvent(message.member.id)) {
       return;
     }
 
     // メンションならば
     await message.channel.createMessage({
       content: `${i18next.t("mentionHelp", { lng: server.locale })}\r\n`
-      + (
-        config.noMessageContent
-          ? ""
-          : i18next.t("mentionHelpPrefix", { prefix: server.prefix, lng: server.locale })
-      ),
+        + (
+          config.noMessageContent
+            ? ""
+            : i18next.t("mentionHelpPrefix", { prefix: server.prefix, lng: server.locale })
+        ),
     })
       .catch(this.logger.error);
     return;
@@ -77,8 +76,8 @@ export async function onMessageCreate(this: MusicBot, message: discord.Message){
 
   const prefix = server.prefix;
   const messageContent = normalizeText(message.content);
-  if(messageContent.startsWith(prefix) && messageContent.length > prefix.length){
-    if(this._rateLimitController.pushEvent(message.member.id)){
+  if (messageContent.startsWith(prefix) && messageContent.length > prefix.length) {
+    if (this._rateLimitController.pushEvent(message.member.id)) {
       return;
     }
 
@@ -86,40 +85,40 @@ export async function onMessageCreate(this: MusicBot, message: discord.Message){
     const commandMessage = CommandMessage.createFromMessage(message as discord.Message<discord.TextChannel>, prefix.length);
     // コマンドを解決
     const command = CommandManager.instance.resolve(commandMessage.command);
-    if(!command) return;
-    if(
+    if (!command) return;
+    if (
       // BGM構成が存在するサーバー
       server instanceof GuildDataContainerWithBgm
       && (
       // いまBGM再生中
-        server.queue.isBGM
+        (
+          server.queue.isBGM
           && (
-            // キューの編集を許可していない、またはBGM優先モード
+          // キューの編集を許可していない、またはBGM優先モード
             !server.bgmConfig.allowEditQueue || server.bgmConfig.mode === "prior"
-          )
+          ))
         // BGMが再生していなければ、BGMオンリーモードであれば
-        || server.bgmConfig.mode === "only"
+          || server.bgmConfig.mode === "only"
       )
       // かつBGM構成で制限があるときに実行できないコマンドならば
       && command.category !== "utility" && command.category !== "bot" && command.name !== "ボリューム"
-    ){
+    ) {
       // 無視して返却
       return;
     }
     // 送信可能か確認
-    if(!discordUtil.channels.checkSendable(message.channel, this._client.user.id)){
-      try{
+    if (!discordUtil.channels.checkSendable(message.channel, this._client.user.id)) {
+      try {
         await message.channel.createMessage({
           messageReference: {
             messageID: message.id,
           },
-          content: i18next.t("lackPermissions", { lng: server.locale }),
+          content: `:warning: ${i18next.t("lackPermissions", { lng: server.locale })}`,
           allowedMentions: {
             repliedUser: false,
           },
         });
-      }
-      catch{ /* empty */ }
+      } catch { /* empty */ }
       return;
     }
     // コマンドの処理
@@ -130,32 +129,34 @@ export async function onMessageCreate(this: MusicBot, message: discord.Message){
         commandMessage.options,
         commandMessage.rawOptions,
         server.locale,
-      )
+      ),
     );
-  }else if(server.searchPanel.has(message.member.id)){
+  } else if (server.searchPanel.has(message.member.id)) {
     // searchコマンドのキャンセルを捕捉
     const panel = server.searchPanel.get(message.member.id)!;
     const content = normalizeText(message.content);
-    if(
+
+    if (
       message.content === "キャンセル"
       || message.content === "cancel"
       || message.content === i18next.t("cancel", { lng: server.locale })
-    ){
+    ) {
       await panel.destroy();
-    }
-    // searchコマンドの選択を捕捉
-    else if(content.match(/^([0-9]\s?)+$/)){
+    } else if (content.match(/^([0-9]\s?)+$/)) {
+      // searchコマンドの選択を捕捉
       // メッセージ送信者が検索者と一致するかを確認
       const nums = content.split(" ");
       await server.playFromSearchPanelOptions(nums, panel);
     }
-  }else if(
+  } else if (
     message.content === "キャンセル"
     || message.content === "cancel"
     || message.content === i18next.t("cancel", { lng: server.locale })
-  ){
+  ) {
     const result = server.cancelAll();
-    if(!result) return;
+
+    if (!result) return;
+
     await message.channel.createMessage({
       messageReference: {
         messageID: message.id,

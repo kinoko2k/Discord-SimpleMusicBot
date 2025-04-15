@@ -1,18 +1,18 @@
 /*
- * Copyright 2021-2024 mtripg6666tdr
- * 
- * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
+ * Copyright 2021-2025 mtripg6666tdr
+ *
+ * This file is part of mtripg6666tdr/Discord-SimpleMusicBot.
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
- * 
- * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it 
- * under the terms of the GNU General Public License as published by the Free Software Foundation, 
+ *
+ * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  *
- * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot. 
+ * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot.
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
@@ -45,9 +45,8 @@ type GetPlaylistResult = {
   }[],
 };
 
-// eslint-disable-next-line @typescript-eslint/ban-types
 export function Playlist(id: string, options: ytpl.Options & Record<string & {}, any> = {}): Promise<GetPlaylistResult> {
-  if(dYtpl){
+  if (dYtpl) {
     return dYtpl(id, { ...playlistSearchOptions, ...options })
       .then(resolveDYtplToResult)
       .catch(() => {
@@ -58,15 +57,15 @@ export function Playlist(id: string, options: ytpl.Options & Record<string & {},
   return ytpl(id, { ...playlistSearchOptions, ...options }).then(resolveYtplToResult);
 }
 
-Playlist.validateID = function validateID(url: string){
+Playlist.validateID = function validateID(url: string) {
   return ytpl.validateID(url);
 };
 
-Playlist.getPlaylistID = function getPlaylistID(url: string){
+Playlist.getPlaylistID = function getPlaylistID(url: string) {
   return ytpl.getPlaylistID(url);
 };
 
-function resolveYtplToResult(result: ytpl.Result): GetPlaylistResult{
+function resolveYtplToResult(result: ytpl.Result): GetPlaylistResult {
   return {
     title: result.title,
     itemCount: result.estimatedItemCount,
@@ -88,10 +87,10 @@ function resolveYtplToResult(result: ytpl.Result): GetPlaylistResult{
 function resolveDYtplToResult(result: import("@distube/ytpl").result): GetPlaylistResult {
   let thumbnailUrl: string | null = null;
 
-  if("thumbnail" in result){
+  if ("thumbnail" in result) {
     const thumbnail = result.thumbnail as any;
 
-    if(typeof thumbnail?.url === "string"){
+    if (typeof thumbnail?.url === "string") {
       thumbnailUrl = thumbnail.url;
     }
   }

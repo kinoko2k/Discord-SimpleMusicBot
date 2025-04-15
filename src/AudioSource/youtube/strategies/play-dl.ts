@@ -1,23 +1,23 @@
 /*
- * Copyright 2021-2024 mtripg6666tdr
- * 
- * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
+ * Copyright 2021-2025 mtripg6666tdr
+ *
+ * This file is part of mtripg6666tdr/Discord-SimpleMusicBot.
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
- * 
- * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it 
- * under the terms of the GNU General Public License as published by the Free Software Foundation, 
+ *
+ * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  *
- * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot. 
+ * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot.
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
-import type { Cache, StrategyFetchResult } from "./base";
 import type { YouTubeJsonFormat } from "..";
+import type { Cache, StrategyFetchResult } from "./base";
 import type { StreamInfo, UrlStreamInfo } from "../../audiosource";
 import type { InfoData } from "play-dl";
 
@@ -31,11 +31,11 @@ type playDl = "playDl";
 export const playDl: playDl = "playDl";
 
 export class playDlStrategy extends Strategy<Cache<playDl, InfoData>, InfoData> {
-  get cacheType(){
+  get cacheType() {
     return playDl;
   }
 
-  async getInfo(url: string){
+  async getInfo(url: string) {
     this.logStrategyUsed();
     const info = await video_info(url);
     return {
@@ -62,7 +62,7 @@ export class playDlStrategy extends Strategy<Cache<playDl, InfoData>, InfoData> 
       relatedVideos: info.related_videos,
     };
 
-    if(info.LiveStreamData.isLive){
+    if (info.LiveStreamData.isLive) {
       return {
         ...partialResult,
         stream: {
@@ -75,9 +75,9 @@ export class playDlStrategy extends Strategy<Cache<playDl, InfoData>, InfoData> 
           data: info,
         },
       };
-    }else if(forceUrl){
+    } else if (forceUrl) {
       const format = info.format.filter(f => f.mimeType?.startsWith("audio"));
-      if(format.length === 0){
+      if (format.length === 0) {
         throw new Error("no format found!");
       }
 
@@ -96,7 +96,7 @@ export class playDlStrategy extends Strategy<Cache<playDl, InfoData>, InfoData> 
           data: info,
         },
       };
-    }else{
+    } else {
       const stream = await stream_from_info(info, { quality: 999, discordPlayerCompatibility: true });
       return {
         ...partialResult,
@@ -113,8 +113,8 @@ export class playDlStrategy extends Strategy<Cache<playDl, InfoData>, InfoData> 
     }
   }
 
-  protected mapToExportable(url: string, info: InfoData): YouTubeJsonFormat{
-    if(info.video_details.upcoming) throw new Error("This video is still in upcoming");
+  protected mapToExportable(url: string, info: InfoData): YouTubeJsonFormat {
+    if (info.video_details.upcoming) throw new Error("This video is still in upcoming");
     return {
       url,
       title: info.video_details.title!,

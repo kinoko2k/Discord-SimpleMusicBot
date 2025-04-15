@@ -1,18 +1,18 @@
 /*
- * Copyright 2021-2024 mtripg6666tdr
- * 
- * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
+ * Copyright 2021-2025 mtripg6666tdr
+ *
+ * This file is part of mtripg6666tdr/Discord-SimpleMusicBot.
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
- * 
- * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it 
- * under the terms of the GNU General Public License as published by the Free Software Foundation, 
+ *
+ * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  *
- * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot. 
+ * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot.
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
@@ -38,7 +38,8 @@ type DefaultProvidedConfigPropertyNames =
   | "maxLogFiles"
   | "proxy"
   | "botWhiteList"
-  | "djRoleNames";
+  | "djRoleNames"
+  | "showGuildCountStatus";
 
 type DefaultProvidedConfigProperties = {
   [key in Exclude<DefaultProvidedConfigPropertyNames, "proxy">]: Exclude<StaticConfigSchema[key], null | undefined>
@@ -55,48 +56,47 @@ class ConfigLoader {
   protected static _instance: ConfigLoader | null = null;
   protected _config: ConfigObject;
 
-  protected constructor(){
+  protected constructor() {
     this.load();
   }
 
-  static get instance(){
-    if(this._instance){
+  static get instance() {
+    if (this._instance) {
       return this._instance;
-    }else{
+    } else {
       return this._instance = new this();
     }
   }
 
-  get config(){
+  get config() {
     return this._config;
   }
 
-  protected load(){
+  protected load() {
     const checker = TypeCompiler.Compile(ConfigSchema);
 
     let config: ReturnType<typeof CJSON.parse> = null;
 
-    try{
+    try {
       config = CJSON.parse(
         fs.readFileSync(path.join(__dirname, global.BUNDLED ? "../config.json" : "../../config.json"), { encoding: "utf-8" }),
         undefined,
-        true
+        true,
       );
-    }
-    catch(er){
+    } catch (er) {
       throw new Error("Failed to parse `config.json`.", {
         cause: er,
       });
     }
 
     const errs = [...checker.Errors(config)];
-    if(errs.length > 0){
+    if (errs.length > 0) {
       throw new Error("Invalid `config.json`.", {
         cause: errs,
       });
     }
 
-    if(DEVELOPMENT_PHASE && (!config || typeof config !== "object" || !("debug" in config) || !config.debug)){
+    if (DEVELOPMENT_PHASE && (!config || typeof config !== "object" || !("debug" in config) || !config.debug)) {
       console.error("This is still in a development phase, and running without the debug mode is currently disabled.");
       console.error("You should use the latest version instead of the current branch.");
       console.error("If you understand exactly what you are doing, please enable the debug mode.");
@@ -110,6 +110,7 @@ class ConfigLoader {
       proxy: null,
       botWhiteList: [],
       djRoleNames: ["DJ"],
+      showGuildCountStatus: false,
     };
 
     this._config = Object.assign(
@@ -123,7 +124,7 @@ class ConfigLoader {
       config,
     ) as unknown as ConfigObject;
     this._config.isBotAdmin = (userId: string) => {
-      if(!this._config.adminId){
+      if (!this._config.adminId) {
         return userId === "593758391395155978";
       }
       return typeof this._config.adminId === "string" ? this._config.adminId === userId : this._config.adminId.includes(userId);
@@ -136,7 +137,7 @@ class ConfigLoader {
   }
 }
 
-export function getConfig(){
+export function getConfig() {
   return ConfigLoader.instance.config;
 }
 

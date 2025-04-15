@@ -1,18 +1,18 @@
 /*
- * Copyright 2021-2024 mtripg6666tdr
- * 
- * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
+ * Copyright 2021-2025 mtripg6666tdr
+ *
+ * This file is part of mtripg6666tdr/Discord-SimpleMusicBot.
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
- * 
- * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it 
- * under the terms of the GNU General Public License as published by the Free Software Foundation, 
+ *
+ * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  *
- * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot. 
+ * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot.
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
@@ -34,11 +34,11 @@ export class Telemetry extends LogEmitter<Record<never, never>> {
   private hash: string | null = null;
   private _paused: boolean = false;
 
-  get paused(){
+  get paused() {
     return this._paused;
   }
 
-  constructor(protected readonly bot: MusicBot){
+  constructor(protected readonly bot: MusicBot) {
     super("Telemetry");
 
     this.logger.info("Discord-SimpleMusicBot now collects completely anonymous telemetry data about usage.");
@@ -48,19 +48,19 @@ export class Telemetry extends LogEmitter<Record<never, never>> {
     this.bot.once("ready", this.onReady.bind(this));
   }
 
-  pause(){
+  pause() {
     this._paused = true;
   }
 
-  resume(){
+  resume() {
     this._paused = false;
   }
 
-  registerError(err: unknown){
+  registerError(err: unknown) {
     this.errors.push(filterContent(stringifyObject(err)));
   }
 
-  private onReady(){
+  private onReady() {
     this.send().catch(this.logger.warn);
     this.bot.on("tick", this.onTick.bind(this));
     process.on("uncaughtException", err => {
@@ -68,13 +68,13 @@ export class Telemetry extends LogEmitter<Record<never, never>> {
     });
   }
 
-  private onTick(count: number){
-    if(count % t12HOURS === 0){
+  private onTick(count: number) {
+    if (count % t12HOURS === 0) {
       this.send().catch(this.logger.warn);
     }
   }
 
-  private collect(){
+  private collect() {
     const error = this.errors;
     this.errors = [];
 
@@ -92,8 +92,8 @@ export class Telemetry extends LogEmitter<Record<never, never>> {
     };
   }
 
-  private calcHash(){
-    if(this.hash){
+  private calcHash() {
+    if (this.hash) {
       return this.hash;
     }
 
@@ -109,12 +109,12 @@ export class Telemetry extends LogEmitter<Record<never, never>> {
     return hash;
   }
 
-  private restoreErrorLog(errors: string[]){
+  private restoreErrorLog(errors: string[]) {
     this.errors = [...errors, ...this.errors];
   }
 
-  private async send(){
-    if(this.paused){
+  private async send() {
+    if (this.paused) {
       this.logger.debug("Telemetry is temporarily disabled.");
       return;
     }
@@ -133,10 +133,10 @@ export class Telemetry extends LogEmitter<Record<never, never>> {
       },
     }, JSON.stringify(data));
 
-    if(statusCode >= 400){
+    if (statusCode >= 400) {
       this.restoreErrorLog(data.error);
       this.logger.debug(`Failed to send telemetry data. (status: ${statusCode})`);
-    }else{
+    } else {
       this.logger.debug(`Successfully sent telemetry data. (status: ${statusCode})`);
     }
   }

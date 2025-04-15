@@ -1,25 +1,26 @@
 /*
- * Copyright 2021-2024 mtripg6666tdr
- * 
- * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
+ * Copyright 2021-2025 mtripg6666tdr
+ *
+ * This file is part of mtripg6666tdr/Discord-SimpleMusicBot.
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
- * 
- * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it 
- * under the terms of the GNU General Public License as published by the Free Software Foundation, 
+ *
+ * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  *
- * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot. 
+ * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot.
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
 import type { ResponseMessage } from "./commandResolver/ResponseMessage";
 import type { CommandMessage as LibCommandMessage } from "@mtripg6666tdr/oceanic-command-resolver";
+import type { AnyTextableGuildChannel, CreateMessageOptions, EditMessageOptions, Message } from "oceanic.js";
 
-import { AnyTextableGuildChannel, Channel, CreateMessageOptions, EditMessageOptions, Message } from "oceanic.js";
+import { Channel } from "oceanic.js";
 
 import TypedEventEmitter from "../Structure/TypedEmitter";
 import { waitForEnteringState } from "../Util";
@@ -39,11 +40,11 @@ type DeferredMessageObjectResolvable = Message<AnyTextableGuildChannel> | Respon
  * 遅延したメッセージを表します。
  * 遅延したメッセージは、メッセージの送信がリクエストされてから、指定された時間経過したのちに、
  * 送信されますが、指定された時間経過前に別のメッセージの送信がリクエストされた場合、
- * 当初のリクエストはキャンセルされ、新しいリクエストが即時に送信されます。  
+ * 当初のリクエストはキャンセルされ、新しいリクエストが即時に送信されます。
  * このクラスは、二回以上送信を遅延させることはできません。
  */
 export class DeferredMessage extends TypedEventEmitter<DeferredMessageEvents> {
-  private constructor(){
+  private constructor() {
     super();
     this.edit = this.update.bind(this);
   }
@@ -76,19 +77,20 @@ export class DeferredMessage extends TypedEventEmitter<DeferredMessageEvents> {
   private messageSent: boolean = false;
   private _canceled: boolean = false;
 
-  get canceled(){
+  get canceled() {
     return this._canceled;
   }
-  private set canceled(value: boolean){
+
+  private set canceled(value: boolean) {
     this._canceled = value;
   }
 
-  get channel(){
+  get channel() {
     return this.replyTo instanceof Channel ? this.replyTo : this.replyTo.channel;
   }
 
   @bindThis
-  private async reply(options: CreateMessageOptions){
+  private async reply(options: CreateMessageOptions) {
     const res = "reply" in this.replyTo
       ? await this.replyTo.reply(options)
       : await this.replyTo.createMessage(options);
@@ -97,7 +99,7 @@ export class DeferredMessage extends TypedEventEmitter<DeferredMessageEvents> {
   }
 
   @bindThis
-  private onError(reason?: any){
+  private onError(reason?: any) {
     this.emit("error", reason);
     return null;
   }
@@ -110,20 +112,20 @@ export class DeferredMessage extends TypedEventEmitter<DeferredMessageEvents> {
    * @returns 更新後のメッセージオブジェクト
    */
   async update(options: ExcludeNullValue<EditMessageOptions>) {
-    if(!this.messageSending && !this.messageSent){
+    if (!this.messageSending && !this.messageSent) {
       this.emit("debug", "Canceling the deferred message.");
       clearTimeout(this.messageTimeout!);
     }
 
-    if(this.messageSending){
+    if (this.messageSending) {
       this.emit("debug", "The deferred message is being sent. Waiting for the message to be sent.");
       await waitForEnteringState(() => !this.messageSending, 10e3, { rejectOnTimeout: false });
     }
 
-    if(this.message){
+    if (this.message) {
       this.emit("debug", "Editing the message that has been alrady sent.");
       return this.message.edit(options);
-    }else{
+    } else {
       this.emit("debug", "Sending the message immediately since the deferred message has been canceled.");
       return this.message = await this.reply(options);
     }
@@ -140,10 +142,10 @@ export class DeferredMessage extends TypedEventEmitter<DeferredMessageEvents> {
    * @param throwIfScheduleAlreadyDone すでに送信されている場合に例外をスローするかどうかを指定します。
    * @returns 遅延メッセージの送信のキャンセルに成功すれば `true`、それ以外の場合は `false` を返します。
    */
-  cancelSchedule(throwIfScheduleAlreadyDone?: boolean){
-    if(this.canceled) return false;
-    if(this.messageSent){
-      if(throwIfScheduleAlreadyDone){
+  cancelSchedule(throwIfScheduleAlreadyDone?: boolean) {
+    if (this.canceled) return false;
+    if (this.messageSent) {
+      if (throwIfScheduleAlreadyDone) {
         throw new Error("This schedule has already been done.");
       }
 

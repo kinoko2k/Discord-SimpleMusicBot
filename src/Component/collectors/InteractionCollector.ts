@@ -1,18 +1,18 @@
 /*
- * Copyright 2021-2024 mtripg6666tdr
- * 
- * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
+ * Copyright 2021-2025 mtripg6666tdr
+ *
+ * This file is part of mtripg6666tdr/Discord-SimpleMusicBot.
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
- * 
- * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it 
- * under the terms of the GNU General Public License as published by the Free Software Foundation, 
+ *
+ * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  *
- * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot. 
+ * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot.
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
@@ -43,28 +43,28 @@ export class InteractionCollector<T extends InteractionCollectorEvents = Interac
   protected resetTimeoutOnInteraction = false;
   protected message: Message<AnyTextableGuildChannel> | ResponseMessage | null = null;
 
-  getCustomIds(){
+  getCustomIds() {
     return [...this.customIdMap.keys()];
   }
 
-  get collectorId(){
+  get collectorId() {
     return this._collectorId;
   }
 
-  constructor(protected parent: InteractionCollectorManager){
+  constructor(protected parent: InteractionCollectorManager) {
     const collectorId = crypto.randomUUID();
     super("InteractionCollector", collectorId);
     this._collectorId = collectorId;
   }
 
-  setMaxInteraction(count: number){
+  setMaxInteraction(count: number) {
     this.maxReceiveCount = count;
     this.logger.debug(`max interaction count: ${count}`);
     return this;
   }
 
-  setTimeout(timeout: number){
-    if(this.timer){
+  setTimeout(timeout: number) {
+    if (this.timer) {
       clearTimeout(this.timer);
     }
     this.logger.debug(`timeout: ${timeout}`);
@@ -76,19 +76,19 @@ export class InteractionCollector<T extends InteractionCollectorEvents = Interac
     return this;
   }
 
-  setAuthorIdFilter(userId: string | null = null){
+  setAuthorIdFilter(userId: string | null = null) {
     this.userId = userId;
     this.logger.debug(`author filter: ${this.userId}`);
     return this;
   }
 
-  setResetTimeoutOnInteraction(reset: boolean){
+  setResetTimeoutOnInteraction(reset: boolean) {
     this.resetTimeoutOnInteraction = reset;
     return this;
   }
 
   createCustomIds<
-    U extends Record<string, "button"|"selectMenu"> & { [key in keyof T]?: never }
+    U extends Record<string, "button" | "selectMenu"> & { [key in keyof T]?: never },
   >(componentTypes: U): {
     customIdMap: { [key in keyof U]: string },
     collector: InteractionCollector<T & {
@@ -99,7 +99,7 @@ export class InteractionCollector<T extends InteractionCollectorEvents = Interac
   } {
     const existingComponentIds = [...this.customIdMap.values()];
     const componentIds = Object.keys(componentTypes) as (keyof U)[];
-    if(componentIds.some(id => existingComponentIds.includes(id as string))){
+    if (componentIds.some(id => existingComponentIds.includes(id as string))) {
       throw new Error("Duplicated key");
     }
     const customIds = Array.from({ length: componentIds.length }, () => `collector-${crypto.randomUUID()}`);
@@ -116,44 +116,44 @@ export class InteractionCollector<T extends InteractionCollectorEvents = Interac
     };
   }
 
-  handleInteraction(interaction: ComponentInteraction<any, AnyTextableGuildChannel>){
+  handleInteraction(interaction: ComponentInteraction<any, AnyTextableGuildChannel>) {
     const componentId = this.customIdMap.get(interaction.data.customID);
-    if(!componentId){
+    if (!componentId) {
       this.logger.warn(`unknown custom id: ${interaction.data.customID}`);
       return;
-    }else if(this.userId && interaction.member.id !== this.userId){
+    } else if (this.userId && interaction.member.id !== this.userId) {
       this.logger.warn(`forbidden interaction; ignoring: ${interaction.data.customID}`);
       return;
     }
     this.logger.debug(`id mapped ${interaction.data.customID} => ${componentId}`);
-    if(this.resetTimeoutOnInteraction && this.timeout){
+    if (this.resetTimeoutOnInteraction && this.timeout) {
       this.setTimeout(this.timeout);
     }
     this.emit(componentId as any, interaction);
     this.receivedCount++;
-    if(this.receivedCount >= this.maxReceiveCount){
+    if (this.receivedCount >= this.maxReceiveCount) {
       this.destroy();
     }
   }
 
-  setMessage(message: Message<AnyTextableGuildChannel> | ResponseMessage){
+  setMessage(message: Message<AnyTextableGuildChannel> | ResponseMessage) {
     this.message = message;
     return message;
   }
 
-  destroy(){
-    if(!this.destroyed){
+  destroy() {
+    if (!this.destroyed) {
       this.destroyed = true;
       this.emit("destroy");
       this.logger.debug("destroyed");
     }
-    if(this.message){
+    if (this.message) {
       this.message.edit({
         components: [],
       }).catch(this.logger.error);
       this.message = null;
     }
-    if(this.timer){
+    if (this.timer) {
       clearTimeout(this.timer);
       this.timer = null;
     }

@@ -1,18 +1,18 @@
 /*
- * Copyright 2021-2024 mtripg6666tdr
- * 
- * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
+ * Copyright 2021-2025 mtripg6666tdr
+ *
+ * This file is part of mtripg6666tdr/Discord-SimpleMusicBot.
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
- * 
- * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it 
- * under the terms of the GNU General Public License as published by the Free Software Foundation, 
+ *
+ * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  *
- * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot. 
+ * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot.
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
@@ -35,7 +35,7 @@ type Analytics = Collectionate<{
   errorCount: number,
   timestamp: number,
   type: "playlog",
-}|{
+} | {
   command: string,
   count: number,
   type: "command",
@@ -51,11 +51,11 @@ export class MongoBackupper extends Backupper {
     analytics: mongo.Collection<Analytics>,
   } = null!;
 
-  static get backuppable(){
+  static get backuppable() {
     return process.env.DB_URL && (process.env.DB_URL.startsWith("mongodb://") || process.env.DB_URL.startsWith("mongodb+srv://"));
   }
 
-  constructor(bot: MusicBotBase, getData: () => DataType){
+  constructor(bot: MusicBotBase, getData: () => DataType) {
     super(bot, getData);
 
     this.logger.info("Initializing Mongo DB backup server adapter...");
@@ -97,7 +97,7 @@ export class MongoBackupper extends Backupper {
 
       this.data.forEach(setContainerEvent);
       this.bot.on("guildDataAdded", setContainerEvent);
-      this.bot.on("onBotVoiceChannelJoin", (channel) => backupStatusFuncFactory(channel.guild.id)());
+      this.bot.on("onBotVoiceChannelJoin", channel => backupStatusFuncFactory(channel.guild.id)());
       this.bot.client.on("guildDelete", ({ id }) => this.deleteGuildData(id));
 
       // analytics
@@ -107,64 +107,62 @@ export class MongoBackupper extends Backupper {
     });
   }
 
-  protected async deleteGuildData(guildId: string){
-    if(this.collections && this.dbConnectionReady){
+  protected async deleteGuildData(guildId: string) {
+    if (this.collections && this.dbConnectionReady) {
       Promise.allSettled([
         this.collections.queue.deleteOne({ guildId }),
         this.collections.status.deleteOne({ guildId }),
       ]).catch(this.logger.error);
-    }else{
+    } else {
       this.logger.warn(`No data was removed (guildId: ${guildId}) due to no connection`);
     }
   }
 
   @measureTime
-  async backupStatus(guildId: string){
-    if(!MongoBackupper.backuppable || !this.dbConnectionReady) return;
-    try{
+  async backupStatus(guildId: string) {
+    if (!MongoBackupper.backuppable || !this.dbConnectionReady) return;
+    try {
       this.logger.info(`Backing up status...(${guildId})`);
       const status = this.data.get(guildId)?.exportStatus();
-      if(!status) return;
+      if (!status) return;
       await this.collections.status.updateOne({ guildId }, {
-        "$set": {
+        $set: {
           guildId,
           ...status,
         },
       }, {
         upsert: true,
       });
-    }
-    catch(er){
+    } catch (er) {
       this.logger.error(er);
       this.logger.info("Something went wrong while backing up status");
     }
   }
 
   @measureTime
-  async backupQueue(guildId: string){
-    if(!MongoBackupper.backuppable || !this.dbConnectionReady) return;
-    try{
+  async backupQueue(guildId: string) {
+    if (!MongoBackupper.backuppable || !this.dbConnectionReady) return;
+    try {
       const queue = this.data.get(guildId)?.exportQueue();
-      if(!queue) return;
+      if (!queue) return;
       this.logger.info(`Backing up queue...(${guildId})`);
       await this.collections.queue.updateOne({ guildId }, {
-        "$set": {
+        $set: {
           guildId,
           ...queue,
         },
       }, {
         upsert: true,
       });
-    }
-    catch(er){
+    } catch (er) {
       this.logger.error(er);
       this.logger.warn("Something went wrong while backing up queue");
     }
   }
 
-  async addPlayerAnalyticsEvent(guildId: string, totalDuration: number, errorCount: number){
-    if(!MongoBackupper.backuppable || !this.dbConnectionReady) return;
-    try{
+  async addPlayerAnalyticsEvent(guildId: string, totalDuration: number, errorCount: number) {
+    if (!MongoBackupper.backuppable || !this.dbConnectionReady) return;
+    try {
       await this.collections.analytics.insertOne({
         type: "playlog",
         guildId,
@@ -172,15 +170,14 @@ export class MongoBackupper extends Backupper {
         errorCount,
         timestamp: Date.now(),
       });
-    }
-    catch(er){
+    } catch (er) {
       this.logger.error(er);
     }
   }
 
-  async addCommandAnalyticsEvent(command: BaseCommand, context: CommandArgs){
-    if(!MongoBackupper.backuppable || !this.dbConnectionReady) return;
-    try{
+  async addCommandAnalyticsEvent(command: BaseCommand, context: CommandArgs) {
+    if (!MongoBackupper.backuppable || !this.dbConnectionReady) return;
+    try {
       await this.collections.analytics.updateOne({
         type: "command",
         commandName: command.name,
@@ -192,32 +189,30 @@ export class MongoBackupper extends Backupper {
       }, {
         upsert: true,
       });
-    }
-    catch(er){
+    } catch (er) {
       this.logger.error(er);
     }
   }
 
   @measureTime
-  override async getStatusFromBackup(guildIds: string[]){
-    if(!this.dbConnectionReady && !this.dbError) await waitForEnteringState(() => this.dbConnectionReady || !!this.dbError, Infinity);
-    if(this.dbError){
+  override async getStatusFromBackup(guildIds: string[]) {
+    if (!this.dbConnectionReady && !this.dbError) await waitForEnteringState(() => this.dbConnectionReady || !!this.dbError, Infinity);
+    if (this.dbError) {
       this.logger.warn("Database connecting failed!!");
       return null;
     }
-    try{
+    try {
       const dbResult = this.collections.status.find({
-        "$or": guildIds.map(id => ({
+        $or: guildIds.map(id => ({
           guildId: id,
         })),
       });
       const result = new Map<string, JSONStatuses>();
-      for await(const doc of dbResult){
+      for await (const doc of dbResult) {
         result.set(doc.guildId, doc);
       }
       return result;
-    }
-    catch(er){
+    } catch (er) {
       this.logger.error(er);
       this.logger.error("Status restoring failed!");
       return null;
@@ -225,32 +220,31 @@ export class MongoBackupper extends Backupper {
   }
 
   @measureTime
-  override async getQueueDataFromBackup(guildids: string[]){
-    if(!this.dbConnectionReady && !this.dbError) await waitForEnteringState(() => this.dbConnectionReady || !!this.dbError, Infinity);
-    if(this.dbError){
+  override async getQueueDataFromBackup(guildids: string[]) {
+    if (!this.dbConnectionReady && !this.dbError) await waitForEnteringState(() => this.dbConnectionReady || !!this.dbError, Infinity);
+    if (this.dbError) {
       this.logger.warn("Database connecting failed!!");
       return null;
     }
-    try{
+    try {
       const dbResult = this.collections.queue.find({
-        "$or": guildids.map(id => ({
+        $or: guildids.map(id => ({
           guildId: id,
         })),
       });
       const result = new Map<string, YmxFormat>();
-      for await(const doc of dbResult){
+      for await (const doc of dbResult) {
         result.set(doc.guildId, doc);
       }
       return result;
-    }
-    catch(er){
+    } catch (er) {
       this.logger.error(er);
       this.logger.error("Queue restoring failed!");
       return null;
     }
   }
 
-  async destroy(){
+  async destroy() {
     await this.client.close();
     this.collections = null!;
     this.dbConnectionReady = false;

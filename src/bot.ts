@@ -1,18 +1,18 @@
 /*
- * Copyright 2021-2024 mtripg6666tdr
- * 
- * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
+ * Copyright 2021-2025 mtripg6666tdr
+ *
+ * This file is part of mtripg6666tdr/Discord-SimpleMusicBot.
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
- * 
- * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it 
- * under the terms of the GNU General Public License as published by the Free Software Foundation, 
+ *
+ * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  *
- * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot. 
+ * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot.
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
@@ -38,13 +38,13 @@ export class MusicBot extends MusicBotBase {
   // eslint-disable-next-line @typescript-eslint/prefer-readonly
   private _isReadyFinished = false;
 
-  get readyFinished(){
+  get readyFinished() {
     return this._isReadyFinished;
   }
 
   private readonly _telemetry: Telemetry | null = null;
 
-  get telemetry(){
+  get telemetry() {
     return this._telemetry;
   }
 
@@ -52,27 +52,29 @@ export class MusicBot extends MusicBotBase {
   // eslint-disable-next-line @typescript-eslint/prefer-readonly
   private _mentionText: `<@${string}>` = "" as `<@${string}>`;
 
-  get mentionText(){
+  get mentionText() {
     return this._mentionText;
   }
 
-  constructor(token: string, maintenance: boolean = false){
+  constructor(token: string, maintenance: boolean = false) {
     super(maintenance);
 
     this._client = new discord.Client({
       auth: `Bot ${token}`,
       gateway: {
-        intents: config.noMessageContent ? [
-          "GUILDS",
-          "GUILD_MESSAGES",
-          "GUILD_VOICE_STATES",
-        ] : [
-          "GUILDS",
-          "GUILD_MESSAGES",
-          "GUILD_VOICE_STATES",
-          "MESSAGE_CONTENT",
-        ],
-        compress: !!(requireIfAny("zlib-sync") || requireIfAny("pako")),
+        intents: config.noMessageContent
+          ? [
+            "GUILDS",
+            "GUILD_MESSAGES",
+            "GUILD_VOICE_STATES",
+          ]
+          : [
+            "GUILDS",
+            "GUILD_MESSAGES",
+            "GUILD_VOICE_STATES",
+            "MESSAGE_CONTENT",
+          ],
+        compress: requireIfAny("zlib-sync") || requireIfAny("pako") ? "zlib-stream" : false,
       },
     });
 
@@ -91,7 +93,7 @@ export class MusicBot extends MusicBotBase {
         .on("error", this.onError.bind(this))
       ;
     });
-    if(config.debug){
+    if (config.debug) {
       this.client
         .on("debug", this.onDebug.bind(this))
         .on("warn", this.onWarn.bind(this))
@@ -99,12 +101,12 @@ export class MusicBot extends MusicBotBase {
     }
   }
 
-  private async onError(er: Error){
+  private async onError(er: Error) {
     this.logger.error(er);
-    if(er.message?.startsWith("Invalid token") || (er.cause as Error | undefined)?.message?.includes("401: Unauthorized")){
+    if (er.message?.startsWith("Invalid token") || (er.cause as Error | undefined)?.message?.includes("401: Unauthorized")) {
       throw new Error("Invalid token detected. Please ensure that you set the correct token. You can also re-generate a new token for your bot.");
-    }else{
-      if(this.client.shards.some(shard => shard.status === "disconnected")){
+    } else {
+      if (this.client.shards.some(shard => shard.status === "disconnected")) {
         this.logger.info("Attempt reconnecting after waiting for a while...");
         this._client.disconnect(true);
       }
@@ -113,26 +115,26 @@ export class MusicBot extends MusicBotBase {
     }
   }
 
-  private onDebug(message: string, id?: number){
+  private onDebug(message: string, id?: number) {
     this.logger.trace(`${message} (ID: ${id || "NaN"})`);
   }
 
-  private onWarn(message: string, id?: number){
+  private onWarn(message: string, id?: number) {
     this.logger.warn(`${message} (ID: ${id || "NaN"})`);
   }
 
   /**
    * Botを開始します。
    */
-  run(){
+  run() {
     this._client.connect().catch(this.onError.bind(this));
   }
 
-  async stop(){
+  async stop() {
     this.logger.info("Shutting down the bot...");
     this._client.removeAllListeners();
     this._client.on("error", () => {});
-    if(this._backupper){
+    if (this._backupper) {
       this.logger.info("Shutting down the db...");
       await this._backupper.destroy();
     }
@@ -145,8 +147,8 @@ export class MusicBot extends MusicBotBase {
    * @param optiont コマンドの生の引数
    * @returns コマンドを実行する際にランナーに渡す引数
    */
-  createCommandRunnerArgs(guildId: string, options: string[], optiont: string, locale: string): CommandArgs{
-    if(!this.guildData.has(guildId)){
+  createCommandRunnerArgs(guildId: string, options: string[], optiont: string, locale: string): CommandArgs {
+    if (!this.guildData.has(guildId)) {
       throw new Error("The specified guild was not found.");
     }
 

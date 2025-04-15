@@ -1,18 +1,18 @@
 /*
- * Copyright 2021-2024 mtripg6666tdr
- * 
- * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
+ * Copyright 2021-2025 mtripg6666tdr
+ *
+ * This file is part of mtripg6666tdr/Discord-SimpleMusicBot.
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
- * 
- * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it 
- * under the terms of the GNU General Public License as published by the Free Software Foundation, 
+ *
+ * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  *
- * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot. 
+ * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot.
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
@@ -25,7 +25,7 @@ import { BaseCommand } from ".";
 import { searchYouTube } from "../AudioSource";
 
 export default class BulkPlay extends BaseCommand {
-  constructor(){
+  constructor() {
     super({
       alias: ["bulk_play", "bulk-play", "bulkplay"],
       unlist: false,
@@ -66,11 +66,11 @@ export default class BulkPlay extends BaseCommand {
 
   @BaseCommand.updateBoundChannel
   protected async run(message: CommandMessage, context: Readonly<CommandArgs>): Promise<void> {
-    if(!await context.server.joinVoiceChannel(message, { replyOnFail: true })) return;
+    if (!await context.server.joinVoiceChannel(message, { replyOnFail: true })) return;
 
     const { t } = context;
 
-    if(context.args.length === 0){
+    if (context.args.length === 0) {
       await message.reply(t("commands:play.noContent")).catch(this.logger.error);
       return;
     }
@@ -82,38 +82,38 @@ export default class BulkPlay extends BaseCommand {
     const keywords = (
       await Promise.allSettled(
         context.args.map(async keyword => {
-          if(keyword.startsWith("http://") || keyword.startsWith("https://")){
+          if (keyword.startsWith("http://") || keyword.startsWith("https://")) {
             return keyword;
           }
 
           let videos: ytsr.Video[] | dYtsr.Video[] = null!;
 
-          if(context.bot.cache.hasSearch(keyword)){
-            videos = await context.bot.cache.getSearch(keyword);
-          }else{
+          if (context.bot.cache.search.has(keyword)) {
+            videos = await context.bot.cache.search.get(keyword);
+          } else {
             const result = await searchYouTube(keyword);
             videos = (result.items as (ytsr.Item | dYtsr.Video)[]).filter(it => it.type === "video") as (ytsr.Video[] | dYtsr.Video[]);
-            context.bot.cache.addSearch(context.rawArgs, videos);
+            context.bot.cache.search.add(context.rawArgs, videos);
           }
 
-          if(videos.length === 0){
+          if (videos.length === 0) {
             throw new Error("No result found.");
           }
 
           return videos[0].url;
-        })
+        }),
       )
     )
       .filter(res => res.status === "fulfilled")
       .map(res => res.value);
 
-    if(keywords.length === 0){
+    if (keywords.length === 0) {
       await Promise.allSettled([
         message.reply(t("commands:play.noContent")).catch(this.logger.error),
         msg.delete(),
       ]);
       return;
-    }else if(keywords.length !== context.args.length){
+    } else if (keywords.length !== context.args.length) {
       await msg.edit({
         content: t("commands:bulk_play.partialSuccess"),
       }).catch(this.logger.error);

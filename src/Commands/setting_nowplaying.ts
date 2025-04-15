@@ -1,18 +1,18 @@
 /*
- * Copyright 2021-2024 mtripg6666tdr
- * 
- * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
+ * Copyright 2021-2025 mtripg6666tdr
+ *
+ * This file is part of mtripg6666tdr/Discord-SimpleMusicBot.
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
- * 
- * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it 
- * under the terms of the GNU General Public License as published by the Free Software Foundation, 
+ *
+ * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  *
- * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot. 
+ * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot.
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
@@ -23,7 +23,7 @@ import { BaseCommand } from ".";
 import { NowPlayingNotificationLevel } from "../types/GuildPreferences";
 
 export default class SettingNowPlayingNotification extends BaseCommand {
-  constructor(){
+  constructor() {
     super({
       alias: ["setting>nowplaying"],
       unlist: false,
@@ -31,7 +31,7 @@ export default class SettingNowPlayingNotification extends BaseCommand {
       requiredPermissionsOr: ["admin", "dj", "onlyListener", "manageGuild"],
       shouldDefer: false,
       examples: false,
-      usage: false,
+      usage: true,
       args: [
         {
           type: "string",
@@ -47,11 +47,11 @@ export default class SettingNowPlayingNotification extends BaseCommand {
     });
   }
 
-  async run(message: CommandMessage, context: CommandArgs){
-    if(context.rawArgs){
+  async run(message: CommandMessage, context: CommandArgs) {
+    if (context.rawArgs) {
       const level = this.resolveLevel(context.rawArgs);
 
-      if(level === null){
+      if (level === null) {
         await message.reply(context.t("commands:setting>nowplaying.invalidLevel"));
         return;
       }
@@ -61,7 +61,7 @@ export default class SettingNowPlayingNotification extends BaseCommand {
       await message.reply(context.t("commands:setting>nowplaying.changed", {
         level: context.t(`commands:setting>nowplaying.args.level.choices.${this.levelToString(level)}`),
       }));
-    }else{
+    } else {
       await message.reply(context.t("commands:setting>nowplaying.currentState", {
         level: context.t(`commands:setting>nowplaying.args.level.choices.${this.levelToString(context.server.preferences.nowPlayingNotificationLevel)}`),
       }));
@@ -69,7 +69,7 @@ export default class SettingNowPlayingNotification extends BaseCommand {
   }
 
   resolveLevel(level: string): NowPlayingNotificationLevel | null {
-    switch(level.toLowerCase()){
+    switch (level.toLowerCase()) {
       case "normal":
       case "true":
         return NowPlayingNotificationLevel.Normal;
@@ -84,7 +84,7 @@ export default class SettingNowPlayingNotification extends BaseCommand {
   }
 
   levelToString(level: NowPlayingNotificationLevel) {
-    switch(level){
+    switch (level) {
       case NowPlayingNotificationLevel.Normal:
         return "normal" as const;
       case NowPlayingNotificationLevel.Silent:

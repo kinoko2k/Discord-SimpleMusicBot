@@ -1,23 +1,23 @@
 /*
- * Copyright 2021-2024 mtripg6666tdr
- * 
- * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
+ * Copyright 2021-2025 mtripg6666tdr
+ *
+ * This file is part of mtripg6666tdr/Discord-SimpleMusicBot.
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
- * 
- * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it 
- * under the terms of the GNU General Public License as published by the Free Software Foundation, 
+ *
+ * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  *
- * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot. 
+ * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot.
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
-import type { Cache, StrategyFetchResult } from "./base";
 import type { YouTubeJsonFormat } from "..";
+import type { Cache, StrategyFetchResult } from "./base";
 import type { BinaryManager } from "../../../Component/binaryManager";
 import type { ReadableStreamInfo, StreamInfo, UrlStreamInfo } from "../../audiosource";
 
@@ -25,17 +25,17 @@ import { Strategy } from "./base";
 import { createFragmentalDownloadStream } from "../../../Util";
 
 export abstract class baseYoutubeDlStrategy<T extends string> extends Strategy<Cache<T, YoutubeDlInfo>, YoutubeDlInfo> {
-  constructor(priority: number, protected id: T, protected binaryManager: BinaryManager){
+  constructor(priority: number, protected id: T, protected binaryManager: BinaryManager) {
     super(priority);
   }
 
-  get cacheType(){
+  get cacheType() {
     return this.id;
   }
 
   last: number = 0;
 
-  async getInfo(url: string){
+  async getInfo(url: string) {
     this.logStrategyUsed();
 
     const info = JSON.parse<YoutubeDlInfo>(await this.binaryManager.exec(["--skip-download", "--print-json", url]));
@@ -64,7 +64,7 @@ export abstract class baseYoutubeDlStrategy<T extends string> extends Strategy<C
       relatedVideos: null,
     };
 
-    if(info.is_live){
+    if (info.is_live) {
       const format = info.formats.filter(f => f.format_id === info.format_id);
 
       return {
@@ -79,14 +79,14 @@ export abstract class baseYoutubeDlStrategy<T extends string> extends Strategy<C
           data: info,
         },
       };
-    }else{
-      const formats = info.formats.filter(f => f.format_note === "tiny" || f.video_ext === "none" && f.abr);
+    } else {
+      const formats = info.formats.filter(f => (f.format_note === "tiny" || f.video_ext === "none") && f.abr && !f.language?.endsWith("-desc"));
 
-      if(formats.length === 0) throw new Error("no format found!");
+      if (formats.length === 0) throw new Error("no format found!");
 
       const [format] = formats.sort((fa, fb) => fb.abr! - fa.abr!);
 
-      if(forceUrl){
+      if (forceUrl) {
         return {
           ...partialResult,
           stream: {
@@ -130,7 +130,7 @@ export abstract class baseYoutubeDlStrategy<T extends string> extends Strategy<C
     }
   }
 
-  protected mapToExportable(url: string, info: YoutubeDlInfo): YouTubeJsonFormat{
+  protected mapToExportable(url: string, info: YoutubeDlInfo): YouTubeJsonFormat {
     return {
       url: url,
       title: info.title,
@@ -203,14 +203,14 @@ export interface YoutubeDlInfo {
 enum Acodec {
   Mp4A402 = "mp4a.40.2",
   None = "none",
-  Opus = "opus"
+  Opus = "opus",
 }
 
 enum TempEXT {
   M4A = "m4a",
   Mp4 = "mp4",
   Webm = "webm",
-  Ogg = "ogg"
+  Ogg = "ogg",
 }
 
 interface Format {
@@ -235,12 +235,13 @@ interface Format {
   http_headers: HTTPHeaders;
   vbr?: number;
   video_ext?: string;
+  language?: string;
 }
 
 enum Container {
   M4ADash = "m4a_dash",
   Mp4Dash = "mp4_dash",
-  WebmDash = "webm_dash"
+  WebmDash = "webm_dash",
 }
 
 interface DownloaderOptions {
@@ -250,29 +251,29 @@ interface DownloaderOptions {
 interface HTTPHeaders {
   "User-Agent": string;
   "Accept-Charset": AcceptCharset;
-  Accept: Accept;
+  "Accept": Accept;
   "Accept-Encoding": AcceptEncoding;
   "Accept-Language": AcceptLanguage;
 }
 
 enum Accept {
-  TextHTMLApplicationXHTMLXMLApplicationXMLQ09Q08 = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+  TextHTMLApplicationXHTMLXMLApplicationXMLQ09Q08 = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }
 
 enum AcceptCharset {
-  ISO88591UTF8Q07Q07 = "ISO-8859-1,utf-8;q=0.7,*;q=0.7"
+  ISO88591UTF8Q07Q07 = "ISO-8859-1,utf-8;q=0.7,*;q=0.7",
 }
 
 enum AcceptEncoding {
-  GzipDeflate = "gzip, deflate"
+  GzipDeflate = "gzip, deflate",
 }
 
 enum AcceptLanguage {
-  EnUsEnQ05 = "en-us,en;q=0.5"
+  EnUsEnQ05 = "en-us,en;q=0.5",
 }
 
 enum Protocol {
-  HTTPS = "https"
+  HTTPS = "https",
 }
 
 interface Thumbnail {

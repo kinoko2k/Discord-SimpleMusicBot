@@ -1,18 +1,18 @@
 /*
- * Copyright 2021-2024 mtripg6666tdr
- * 
- * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
+ * Copyright 2021-2025 mtripg6666tdr
+ *
+ * This file is part of mtripg6666tdr/Discord-SimpleMusicBot.
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
- * 
- * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it 
- * under the terms of the GNU General Public License as published by the Free Software Foundation, 
+ *
+ * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  *
- * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot. 
+ * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot.
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
@@ -29,29 +29,29 @@ interface InteractionCollectorManagerEvents {
 export class InteractionCollectorManager extends LogEmitter<InteractionCollectorManagerEvents> {
   protected collectors = new Map<string, InteractionCollector<any>>();
 
-  get customIdLength(){
+  get customIdLength() {
     return this.collectors.size;
   }
 
-  get collectorLength(){
+  get collectorLength() {
     return new Set(this.collectors.values()).size;
   }
 
-  constructor(){
+  constructor() {
     super("InteractionCollectorManager");
   }
 
-  create(){
+  create() {
     const collector = new InteractionCollector(this);
     return this.setCollectorEvents(collector);
   }
 
-  createPagenation(){
+  createPagenation() {
     const collector = new Pagenation(this);
     return this.setCollectorEvents(collector);
   }
 
-  protected setCollectorEvents<T extends InteractionCollector>(collector: T): T{
+  protected setCollectorEvents<T extends InteractionCollector>(collector: T): T {
     this.logger.debug(`(${collector.collectorId}) collector created`);
     collector
       .on("customIdsCreate", customIds => {
@@ -76,11 +76,11 @@ export class InteractionCollectorManager extends LogEmitter<InteractionCollector
    * @param interaction インタラクション
    * @returns 対応するコレクターが存在し、処理が渡った場合はtrue、それ以外の場合はfalse
    */
-  async onInteractionCreate(interaction: ComponentInteraction<any, AnyTextableGuildChannel>){
+  async onInteractionCreate(interaction: ComponentInteraction<any, AnyTextableGuildChannel>) {
     const collector = this.collectors.get(interaction.data.customID);
-    if(!collector){
+    if (!collector) {
       return false;
-    }else{
+    } else {
       this.logger.debug(`passed an interaction successfully: ${interaction.data.customID} => ${collector.collectorId}`);
       await interaction.deferUpdate();
       collector.handleInteraction(interaction);

@@ -1,39 +1,39 @@
 /*
- * Copyright 2021-2024 mtripg6666tdr
- * 
- * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
+ * Copyright 2021-2025 mtripg6666tdr
+ *
+ * This file is part of mtripg6666tdr/Discord-SimpleMusicBot.
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
- * 
- * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it 
- * under the terms of the GNU General Public License as published by the Free Software Foundation, 
+ *
+ * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  *
- * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot. 
+ * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot.
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
 import type { GuildDataContainer, YmxFormat } from "../../Structure";
 import type { DataType, MusicBotBase } from "../../botBase";
+import type { JSONStatuses } from "../../types/GuildStatuses";
 
 import { isDeepStrictEqual } from "util";
 
 import { LogEmitter } from "../../Structure";
-import { JSONStatuses } from "../../types/GuildStatuses";
 
-// eslint-disable-next-line @typescript-eslint/ban-types
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export abstract class Backupper extends LogEmitter<{}> {
   /**
    * 初期化時に与えられたアクセサを使って、サーバーのデータを返します。
    */
-  protected get data(){
+  protected get data() {
     return this.getData();
   }
 
-  constructor(protected readonly bot: MusicBotBase, protected readonly getData:(() => DataType)){
+  constructor(protected readonly bot: MusicBotBase, protected readonly getData:(() => DataType)) {
     super("Backup");
   }
   /**
@@ -54,7 +54,7 @@ export abstract class IntervalBackupper extends Backupper {
   private readonly queueModifiedGuild = new Set<string>();
   private readonly previousStatusCache = new Map<string, string>();
 
-  constructor(bot: MusicBotBase, getData: () => DataType, name: string){
+  constructor(bot: MusicBotBase, getData: () => DataType, name: string) {
     super(bot, getData);
 
     this.logger.info(`Initializing ${name} Database backup server adapter...`);
@@ -70,39 +70,39 @@ export abstract class IntervalBackupper extends Backupper {
       // これから登録されるコンテナにイベントハンドラを登録する
       this.bot.on("guildDataAdded", setContainerEvent);
       // バックアップのタイマーをセット(二分に一回)
-      this.bot.on("tick", (count) => count % 2 === 0 && this.backup());
+      this.bot.on("tick", count => count % 2 === 0 && this.backup());
 
       this.logger.info("Hook was set up successfully");
     });
   }
 
-  private async backup(){
+  private async backup() {
     await this.backupStatus();
     await this.backupQueue();
   }
 
-  protected updateStatusCache(guildId: string, status: JSONStatuses){
+  protected updateStatusCache(guildId: string, status: JSONStatuses) {
     this.previousStatusCache.set(guildId, JSON.stringify(status));
   }
 
-  protected getQueueModifiedGuildIds(){
+  protected getQueueModifiedGuildIds() {
     return [...this.queueModifiedGuild.keys()];
   }
 
-  protected unmarkQueueModifiedGuild(guildId: string){
+  protected unmarkQueueModifiedGuild(guildId: string) {
     this.queueModifiedGuild.delete(guildId);
   }
 
-  protected unmarkAllQueueModifiedGuild(){
+  protected unmarkAllQueueModifiedGuild() {
     this.queueModifiedGuild.clear();
   }
 
-  protected getStatusModifiedGuildIds(){
+  protected getStatusModifiedGuildIds() {
     return [...this.data.keys()]
       .filter(id => {
-        if(!this.previousStatusCache.has(id)){
+        if (!this.previousStatusCache.has(id)) {
           return true;
-        }else{
+        } else {
           return !isDeepStrictEqual(this.data.get(id)!.exportStatus(), JSON.parse(this.previousStatusCache.get(id)!));
         }
       });

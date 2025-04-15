@@ -1,21 +1,22 @@
 /*
- * Copyright 2021-2024 mtripg6666tdr
- * 
- * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
+ * Copyright 2021-2025 mtripg6666tdr
+ *
+ * This file is part of mtripg6666tdr/Discord-SimpleMusicBot.
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
- * 
- * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it 
- * under the terms of the GNU General Public License as published by the Free Software Foundation, 
+ *
+ * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  *
- * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot. 
+ * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot.
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
+import type { Asset, GitHubRelease } from "../types/GitHubRelease";
 import type { Readable } from "stream";
 
 import { spawn } from "child_process";
@@ -32,7 +33,7 @@ import { createPassThrough, requireIfAny } from "../Util";
 const ffmpegStatic: string | null = requireIfAny("ffmpeg-static") as typeof import("ffmpeg-static").default;
 
 type BinaryManagerOptions = {
-  binaryName: string,
+  binaryName: string | ((asset: Asset, defaultSelector: (filename: string) => boolean) => boolean),
   localBinaryName: string,
   binaryRepo: string,
   checkImmediately: boolean,
@@ -40,45 +41,44 @@ type BinaryManagerOptions = {
   checkUpdateTimeout?: number,
 };
 
-// eslint-disable-next-line @typescript-eslint/ban-types
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export class BinaryManager extends LogEmitter<{}> {
   protected readonly checkUpdateTimeout = this.options.checkUpdateTimeout || 1000 * 60 /* 1 min */ * 60 /* 1 hour */ * 3/* 3 hour */;
   protected baseUrl = path.join(__dirname, global.BUNDLED ? "../bin" : "../../bin");
   protected lastChecked: number = 0;
   protected releaseInfo: GitHubRelease | null = null;
 
-  get binaryPath(){
+  get binaryPath() {
     return path.join(this.baseUrl, "./", this.options.localBinaryName + (process.platform === "win32" ? ".exe" : ""));
   }
 
-  get isStaleInfo(){
+  get isStaleInfo() {
     return Date.now() - this.lastChecked >= this.checkUpdateTimeout;
   }
 
-  constructor(protected options: Readonly<BinaryManagerOptions>){
+  constructor(protected options: Readonly<BinaryManagerOptions>) {
     super(`BinaryManager(${options.localBinaryName})`);
-    if(!fs.existsSync(this.baseUrl)){
-      try{
+    if (!fs.existsSync(this.baseUrl)) {
+      try {
         fs.mkdirSync(this.baseUrl);
-      }
-      catch(e){
+      } catch (e) {
         this.logger.warn(e);
         this.logger.info("Fallbacking to the root directory");
         this.baseUrl = path.join(__dirname, global.BUNDLED ? "../" : "../../");
       }
     }
-    if(options.checkImmediately){
+    if (options.checkImmediately) {
       const latest = this.checkIsLatestVersion();
-      if(!latest){
+      if (!latest) {
         this.downloadBinary().catch(this.logger.error);
       }
     }
   }
 
   private readonly getReleaseInfoLocker = new LockObj();
-  protected async getReleaseInfo(){
+  protected async getReleaseInfo() {
     return lock(this.getReleaseInfoLocker, async () => {
-      if(this.releaseInfo && !this.isStaleInfo){
+      if (this.releaseInfo && !this.isStaleInfo) {
         this.logger.info("Skipping the binary info fetching due to valid info cache found");
         return this.releaseInfo;
       }
@@ -93,11 +93,11 @@ export class BinaryManager extends LogEmitter<{}> {
     });
   }
 
-  protected async checkIsLatestVersion(){
+  protected async checkIsLatestVersion() {
     this.lastChecked = Date.now();
-    if(!fs.existsSync(this.binaryPath)){
+    if (!fs.existsSync(this.binaryPath)) {
       return false;
-    }else{
+    } else {
       this.logger.info("Checking the latest version");
       const [latestVersion, currentVersion] = await Promise.all([
         this.getReleaseInfo().then(info => info.tag_name),
@@ -109,14 +109,24 @@ export class BinaryManager extends LogEmitter<{}> {
     }
   }
 
-  protected async downloadBinary(){
-    if(!this.releaseInfo){
+  protected async downloadBinary() {
+    if (!this.releaseInfo) {
       await this.getReleaseInfo();
     }
-    const binaryUrl = this.releaseInfo!.assets.find(asset => asset.name === `${this.options.binaryName}${process.platform === "win32" ? ".exe" : ""}`)?.browser_download_url;
-    if(!binaryUrl){
+
+    const defaultSelector = (asset: Asset, filename: string) => asset.name === `${filename}${process.platform === "win32" ? ".exe" : ""}`;
+
+    const { binaryName } = this.options;
+
+    const binaryUrl = this.releaseInfo!.assets.find(
+      typeof binaryName === "function"
+        ? asset => binaryName(asset, filename => defaultSelector(asset, filename))
+        : asset => defaultSelector(asset, binaryName),
+    )?.browser_download_url;
+
+    if (!binaryUrl) {
       throw new Error("No binary url detected");
-    }else{
+    } else {
       this.logger.info("Start downloading the binary");
       const result = await candyget.stream(binaryUrl, {
         headers: {
@@ -142,15 +152,15 @@ export class BinaryManager extends LogEmitter<{}> {
     }
   }
 
-  async exec(args: readonly string[], signal?: AbortSignal): Promise<string>{
-    if(!fs.existsSync(this.binaryPath) || this.isStaleInfo){
+  async exec(args: readonly string[], signal?: AbortSignal): Promise<string> {
+    if (!fs.existsSync(this.binaryPath) || this.isStaleInfo) {
       const latest = await this.checkIsLatestVersion();
-      if(!latest){
+      if (!latest) {
         await this.downloadBinary();
       }
     }
     return new Promise((resolve, reject) => {
-      try{
+      try {
         this.logger.info(`Passing arguments: ${args.join(" ")}`);
         const process = spawn(this.binaryPath, args, {
           stdio: ["ignore", "pipe", "pipe"],
@@ -160,13 +170,13 @@ export class BinaryManager extends LogEmitter<{}> {
         let bufs: Buffer[] = [];
         let ended = false;
         const onEnd = () => {
-          if(ended) return;
+          if (ended) return;
           ended = true;
           resolve(
             Buffer.concat(bufs).toString()
-              .trim()
+              .trim(),
           );
-          if(process.connected){
+          if (process.connected) {
             process.kill("SIGTERM");
           }
         };
@@ -182,17 +192,16 @@ export class BinaryManager extends LogEmitter<{}> {
           reject("Aborted");
           process.kill("SIGKILL");
         });
-      }
-      catch(e){
+      } catch (e) {
         reject(e);
       }
     });
   }
 
   async execStream(args: readonly string[]): Promise<Readable> {
-    if(!fs.existsSync(this.binaryPath) || this.isStaleInfo){
+    if (!fs.existsSync(this.binaryPath) || this.isStaleInfo) {
       const latest = await this.checkIsLatestVersion();
-      if(!latest){
+      if (!latest) {
         await this.downloadBinary();
       }
     }
@@ -207,19 +216,19 @@ export class BinaryManager extends LogEmitter<{}> {
         windowsHide: true,
         env: {
           ...process.env,
-          "TOKEN": "",
-          "DB_TOKEN": "",
-          "CSE_KEY": "",
-          "PATH": ffmpegStatic
+          TOKEN: "",
+          DB_TOKEN: "",
+          CSE_KEY: "",
+          PATH: ffmpegStatic
             ? `${process.env.PATH}${process.platform === "win32" ? ";" : ":"}${path.join(ffmpegStatic, "..")}`
             : process.env.PATH,
         },
       });
       let ended = false;
       const onEnd = () => {
-        if(ended) return;
+        if (ended) return;
         ended = true;
-        if(childProcess.connected){
+        if (childProcess.connected) {
           childProcess.kill("SIGKILL");
         }
       };
@@ -230,7 +239,7 @@ export class BinaryManager extends LogEmitter<{}> {
       });
       childProcess.stderr.on("data", (chunk: Buffer) => this.logger.info(`[Child] ${chunk.toString()}`));
       stream.on("close", () => {
-        if(childProcess.connected){
+        if (childProcess.connected) {
           childProcess.kill("SIGKILL");
         }
       });
@@ -238,91 +247,4 @@ export class BinaryManager extends LogEmitter<{}> {
 
     return stream;
   }
-}
-
-// GitHub Release JSON structure generated by QuickType Visual Studio Code Extension
-interface GitHubRelease {
-  url: string;
-  assets_url: string;
-  upload_url: string;
-  html_url: string;
-  id: number;
-  author: Author;
-  node_id: string;
-  tag_name: string;
-  target_commitish: any;
-  name: string;
-  draft: boolean;
-  prerelease: boolean;
-  created_at: string;
-  published_at: string;
-  assets: Asset[];
-  tarball_url: string;
-  zipball_url: string;
-  body: string;
-  reactions?: Reactions;
-}
-
-export interface Asset {
-  url: string;
-  id: number;
-  node_id: string;
-  name: string;
-  label: string;
-  uploader: Author;
-  content_type: ContentType;
-  state: State;
-  size: number;
-  download_count: number;
-  created_at: string;
-  updated_at: string;
-  browser_download_url: string;
-}
-
-export enum ContentType {
-  ApplicationOctetStream = "application/octet-stream",
-  ApplicationPGPSignature = "application/pgp-signature",
-  ApplicationXTar = "application/x-tar"
-}
-
-export enum State {
-  Uploaded = "uploaded"
-}
-
-export interface Author {
-  login: any;
-  id: number;
-  node_id: any;
-  avatar_url: string;
-  gravatar_id: string;
-  url: string;
-  html_url: string;
-  followers_url: string;
-  following_url: any;
-  gists_url: any;
-  starred_url: any;
-  subscriptions_url: string;
-  organizations_url: string;
-  repos_url: string;
-  events_url: any;
-  received_events_url: string;
-  type: Type;
-  site_admin: boolean;
-}
-
-enum Type {
-  User = "User"
-}
-
-interface Reactions {
-  url: string;
-  total_count: number;
-  "+1": number;
-  "-1": number;
-  laugh: number;
-  hooray: number;
-  confused: number;
-  heart: number;
-  rocket: number;
-  eyes: number;
 }

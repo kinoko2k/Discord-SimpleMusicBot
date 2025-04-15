@@ -1,18 +1,18 @@
 /*
- * Copyright 2021-2024 mtripg6666tdr
- * 
- * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
+ * Copyright 2021-2025 mtripg6666tdr
+ *
+ * This file is part of mtripg6666tdr/Discord-SimpleMusicBot.
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
- * 
- * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it 
- * under the terms of the GNU General Public License as published by the Free Software Foundation, 
+ *
+ * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  *
- * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot. 
+ * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot.
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
@@ -29,7 +29,7 @@ import { getConfig } from "../config";
 const config = getConfig();
 
 export default class Help extends BaseCommand {
-  constructor(){
+  constructor() {
     super({
       alias: ["help", "support"],
       unlist: false,
@@ -39,7 +39,7 @@ export default class Help extends BaseCommand {
     });
   }
 
-  async run(message: CommandMessage, context: CommandArgs){
+  async run(message: CommandMessage, context: CommandArgs) {
     const { t } = context;
 
     const developerId = "593758391395155978";
@@ -60,14 +60,14 @@ export default class Help extends BaseCommand {
       .addField(t("commands:help.developer"), `[${developer || "mtripg6666tdr"}](https://github.com/mtripg6666tdr)`)
       .addField(t("commands:help.version"), `\`${context.bot.version}\``);
 
-    if(!process.env.HIDE_REPO_URL){
+    if (!process.env.HIDE_REPO_URL) {
       embed.addField(
         `${t("commands:help.repository")}/${t("commands:help.sourceCode")}`,
-        "https://github.com/mtripg6666tdr/Discord-SimpleMusicBot"
+        "https://github.com/mtripg6666tdr/Discord-SimpleMusicBot",
       );
     }
 
-    if(!process.env.HIDE_SUPPORT_SERVER_URL){
+    if (!process.env.HIDE_SUPPORT_SERVER_URL) {
       embed.addField(t("commands:help.supportServer"), process.env.SUPPORT_SERVER_URL || "https://discord.gg/7DrAEXBMHe");
     }
 

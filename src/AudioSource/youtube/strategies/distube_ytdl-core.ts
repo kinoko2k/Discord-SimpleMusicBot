@@ -1,30 +1,30 @@
 /*
- * Copyright 2021-2024 mtripg6666tdr
- * 
- * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
+ * Copyright 2021-2025 mtripg6666tdr
+ *
+ * This file is part of mtripg6666tdr/Discord-SimpleMusicBot.
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
- * 
- * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it 
- * under the terms of the GNU General Public License as published by the Free Software Foundation, 
+ *
+ * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  *
- * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot. 
+ * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot.
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
+import type { YouTubeJsonFormat } from "..";
 import type { Cache, StrategyFetchResult } from "./base";
 import type { ReadableStreamInfo, StreamInfo, UrlStreamInfo } from "../../audiosource";
 import type { Readable } from "stream";
 
 import * as ytdl from "@distube/ytdl-core";
+import { safeTraverse } from "safe-traverse";
 
 import { Strategy } from "./base";
-import { YouTubeJsonFormat } from "..";
-import { unsafeTraverseFrom } from "../../../Util";
 import { getConfig } from "../../../config";
 import { SecondaryUserAgent } from "../../../definition";
 import { createChunkedDistubeYTStream, createRefreshableYTLiveStream } from "../stream";
@@ -41,11 +41,11 @@ const poTokenExperiments = ["51217476", "51217102"];
 export class distubeYtdlCoreStrategy extends Strategy<distubeYtdlCoreCache, ytdl.videoInfo> {
   protected agent = config.proxy ? ytdl.createProxyAgent({ uri: config.proxy }) : undefined;
 
-  get cacheType(){
+  get cacheType() {
     return distubeYtdlCore;
   }
 
-  async getInfo(url: string){
+  async getInfo(url: string) {
     this.logStrategyUsed();
 
     const info = await ytdl.getInfo(url, {
@@ -55,7 +55,7 @@ export class distubeYtdlCoreStrategy extends Strategy<distubeYtdlCoreCache, ytdl
 
     const nop = this.validateInfoExperiments(info);
 
-    if(!nop){
+    if (!nop) {
       throw new Error("Detected broken formats.");
     }
 
@@ -79,31 +79,35 @@ export class distubeYtdlCoreStrategy extends Strategy<distubeYtdlCoreCache, ytdl
 
     let info: ytdl.videoInfo = null!;
 
-    for(let i = 0; i < 3; i++){
+    for (let i = 0; i < 3; i++) {
       info = availableCache || await ytdl.getInfo(url, {
         lang: config.defaultLanguage,
       });
 
-      if(this.validateInfoExperiments(info)) break;
+      if (this.validateInfoExperiments(info)) break;
 
-      unsafeTraverseFrom(ytdl)
-        .getProperty("cache")
-        .select(obj => Object.values<Map<string, any>>(obj))
-        .execute("forEach")(s => s.clear());
+      this.logger.warn("Detected broken formats; retrying...");
+
+      safeTraverse(ytdl)
+        .get("cache")
+        .values()
+        .call("clear", (s: Map<string, any>) => s.clear());
     }
 
-    if(!this.validateInfoExperiments(info)){
+    if (!this.validateInfoExperiments(info)) {
       throw new Error("Detected broken formats.");
     }
 
-    const format = ytdl.chooseFormat(info.formats, info.videoDetails.liveBroadcastDetails?.isLiveNow ? {
-      filter: undefined,
-      quality: undefined,
-      isHLS: false,
-    } as ytdl.chooseFormatOptions : {
-      filter: "audioonly",
-      quality: "highestaudio",
-    });
+    const format = ytdl.chooseFormat(info.formats, info.videoDetails.liveBroadcastDetails?.isLiveNow
+      ? {
+        filter: undefined,
+        quality: undefined,
+        isHLS: false,
+      } as ytdl.chooseFormatOptions
+      : {
+        filter: "audioonly",
+        quality: "highestaudio",
+      });
 
     this.logger.info(`format: ${format.itag}, bitrate: ${format.bitrate}bps, audio codec:${format.audioCodec}, container: ${format.container}`);
 
@@ -121,7 +125,7 @@ export class distubeYtdlCoreStrategy extends Strategy<distubeYtdlCoreCache, ytdl
       }) as YouTubeJsonFormat),
     };
 
-    if(forceUrl){
+    if (forceUrl) {
       return {
         ...partialResult,
         stream: {
@@ -137,10 +141,10 @@ export class distubeYtdlCoreStrategy extends Strategy<distubeYtdlCoreCache, ytdl
           data: info,
         },
       };
-    }else{
+    } else {
       const readable: Readable = info.videoDetails.liveBroadcastDetails && info.videoDetails.liveBroadcastDetails.isLiveNow
         ? createRefreshableYTLiveStream(info, url, { format, lang: config.defaultLanguage })
-        : createChunkedDistubeYTStream(info, format, { lang: config.defaultLanguage }, 512 * 1024);
+        : createChunkedDistubeYTStream(info, format, { lang: config.defaultLanguage });
 
       return {
         ...partialResult,
@@ -160,7 +164,7 @@ export class distubeYtdlCoreStrategy extends Strategy<distubeYtdlCoreCache, ytdl
     }
   }
 
-  protected mapToExportable(url: string, info: ytdl.videoInfo){
+  protected mapToExportable(url: string, info: ytdl.videoInfo) {
     return {
       url,
       title: info.videoDetails.title,
@@ -179,29 +183,29 @@ export class distubeYtdlCoreStrategy extends Strategy<distubeYtdlCoreCache, ytdl
 
   extractExperiments(info: ytdl.videoInfo): string[] {
     // ref: https://github.com/yt-dlp/yt-dlp/pull/10456/files
-    const experiments = unsafeTraverseFrom(info)
-      .getProperty("response")
-      .getProperty("responseContext")
-      .getProperty("serviceTrackingParams")
-      .select(v => v.find((d: any) => d.service === "GFEEDBACK"))
-      .getProperty("params")
-      .select(v => v.find((d: any) => d.key === "e"))
-      .getProperty("value")
-      .select<string[]>(v => v.split(","))
-      .value;
+
+    const experiments = safeTraverse(info)
+      .expect(_ => _.response.responseContext.serviceTrackingParams)
+      .validate(_ => !!_.find)
+      .select(_ => _.find((d: any) => d.service === "GFEEDBACK"))
+      .get<any>("params")
+      .validate(_ => !!_.find)
+      .select(_ => _.find((d: any) => d.key === "e"))
+      .safeExpect(_ => _.value.split(","))
+      .get() as string[];
 
     return experiments || [];
   }
 
-  validateInfoExperiments(info: ytdl.videoInfo){
+  validateInfoExperiments(info: ytdl.videoInfo) {
     const experiments = this.extractExperiments(info);
 
-    this.logger.trace("Experiments", experiments.join(", "));
+    // this.logger.trace("Experiments", experiments.join(", "));
 
     return !poTokenExperiments.some(expId => experiments.includes(expId));
   }
 
-  validateCacheExperiments(cache: Cache<distubeYtdlCore, ytdl.videoInfo>){
+  validateCacheExperiments(cache: Cache<distubeYtdlCore, ytdl.videoInfo>) {
     return this.validateInfoExperiments(cache.data);
   }
 }

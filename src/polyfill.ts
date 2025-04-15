@@ -1,18 +1,18 @@
 /*
- * Copyright 2021-2024 mtripg6666tdr
- * 
- * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
+ * Copyright 2021-2025 mtripg6666tdr
+ *
+ * This file is part of mtripg6666tdr/Discord-SimpleMusicBot.
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
- * 
- * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it 
- * under the terms of the GNU General Public License as published by the Free Software Foundation, 
+ *
+ * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  *
- * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot. 
+ * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot.
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
@@ -22,7 +22,7 @@ const logger = getLogger("Polyfill");
 
 let polyfillCount = 0;
 
-if(typeof global.fetch === "undefined"){
+if (typeof global.fetch === "undefined") {
   logger.warn("Native fetch function is not defined.");
   logger.warn("Installing a fetch polyfill.");
 
@@ -31,18 +31,43 @@ if(typeof global.fetch === "undefined"){
   global.fetch = require("undici").fetch;
 }
 
-if(typeof global.structuredClone === "undefined"){
+if (typeof global.Blob === "undefined") {
+  logger.warn("Native Blob class is not defined.");
+  logger.warn("Setting up Blob object imported from buffer standard module.");
+
+  polyfillCount++;
+
+  global.Blob = require("buffer").Blob;
+}
+
+if (typeof global.DOMException === "undefined") {
+  logger.warn("Native DOMException class is not defined.");
+  logger.warn("Installing a custom DOMException pollyfill.");
+
+  polyfillCount++;
+
+  // @ts-expect-error
+  global.DOMException = function DOMException(message: string, name: string) {
+    (this as any).message = message;
+    (this as any).name = name;
+  };
+
+  // @ts-expect-error
+  global.DOMException.prototype = Error.prototype;
+}
+
+if (typeof global.structuredClone === "undefined") {
   logger.warn("Native structuredClone function is not defined.");
   logger.warn("Installing a structuredClone polyfill.");
 
   polyfillCount++;
 
-  global.structuredClone = function structuredClone<T>(value: T){
+  global.structuredClone = function structuredClone<T>(value: T) {
     return JSON.parse(JSON.stringify(value));
   };
 }
 
-if(typeof global.ReadableStream === "undefined"){
+if (typeof global.ReadableStream === "undefined") {
   logger.warn("Native ReadableStream class is not globally defined.");
   logger.warn("Setting up ReadableStream object imported from stream/web standard module.");
 
@@ -51,15 +76,15 @@ if(typeof global.ReadableStream === "undefined"){
   global.ReadableStream = require("stream/web").ReadableStream;
 }
 
-if(typeof Array.prototype.findLastIndex === "undefined"){
+if (typeof Array.prototype.findLastIndex === "undefined") {
   logger.warn("Native Array.prototype.findLastIndex function is not defined.");
   logger.warn("Installing a findLastIndex polyfill.");
 
   polyfillCount++;
 
-  Array.prototype.findLastIndex = function findLastIndex<T>(callback: (value: T, index: number, array: T[]) => boolean, thisArg?: any): number{
-    for(let i = this.length - 1; i >= 0; i--){
-      if(callback.call(thisArg, this[i], i, this)){
+  Array.prototype.findLastIndex = function findLastIndex<T>(callback: (value: T, index: number, array: T[]) => boolean, thisArg?: any): number {
+    for (let i = this.length - 1; i >= 0; i--) {
+      if (callback.call(thisArg, this[i], i, this)) {
         return i;
       }
     }
@@ -68,7 +93,7 @@ if(typeof Array.prototype.findLastIndex === "undefined"){
   };
 }
 
-if(polyfillCount > 0){
+if (polyfillCount > 0) {
   logger.warn(`Installed ${polyfillCount} polyfill(s), which means Node.js may be stale.`);
   logger.warn("We strongly recommend you upgrading Node.js to v18 at least or higher.");
 }
@@ -76,8 +101,8 @@ if(polyfillCount > 0){
 logger.debug("Patching @distube/ytdl-core to handle upcoming videos correctly.");
 const dYtdlUtils = require("@distube/ytdl-core/lib/utils");
 const originalPlayError = dYtdlUtils.playError;
-dYtdlUtils.playError = function playError(...args: any[]){
-  if(args[0]?.playabilityStatus?.status === "LIVE_STREAM_OFFLINE"){
+dYtdlUtils.playError = function playError(...args: any[]) {
+  if (args[0]?.playabilityStatus?.status === "LIVE_STREAM_OFFLINE") {
     args[0].playabilityStatus.status += "_REPLACED";
   }
   return originalPlayError.apply(this, args);

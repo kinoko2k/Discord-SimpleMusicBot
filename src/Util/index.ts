@@ -1,18 +1,18 @@
 /*
- * Copyright 2021-2024 mtripg6666tdr
- * 
- * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
+ * Copyright 2021-2025 mtripg6666tdr
+ *
+ * This file is part of mtripg6666tdr/Discord-SimpleMusicBot.
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
- * 
- * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it 
- * under the terms of the GNU General Public License as published by the Free Software Foundation, 
+ *
+ * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  *
- * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot. 
+ * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot.
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
@@ -28,6 +28,7 @@ import candyget from "candyget";
 import miniget from "miniget";
 import { debounce } from "throttle-debounce";
 
+import { destroyStream } from "../Util/stream";
 import { DefaultUserAgent, SecondaryUserAgent } from "../definition";
 import { getLogger } from "../logger";
 
@@ -41,20 +42,19 @@ export * as time from "./time";
  * @param obj 対象のオブジェクト
  * @returns 文字列。JSON、またはその他の文字列、および空の文字列の場合があります
  */
-export function stringifyObject(obj: any): string{
-  if(!obj){
+export function stringifyObject(obj: any): string {
+  if (!obj) {
     return "null";
-  }else if(typeof obj === "string"){
+  } else if (typeof obj === "string") {
     return obj;
-  }else if(obj instanceof Error){
+  } else if (obj instanceof Error) {
     return `${obj.name}: ${obj.message}\n${obj.stack || "no stacks"}`;
-  }else if(obj["message"]){
-    return obj.message;
-  }else{
-    try{
+  } else if (obj["message"]) {
+    return stringifyObject(obj.message);
+  } else {
+    try {
       return JSON.stringify(obj);
-    }
-    catch{
+    } catch {
       return Object.prototype.toString.call(obj);
     }
   }
@@ -65,7 +65,7 @@ export function stringifyObject(obj: any): string{
  * @param original 元の文字列
  * @returns フィルター後の文字列
  */
-export function filterContent(original: string){
+export function filterContent(original: string) {
   const cwd = process.cwd();
   return original
     .replaceAll(cwd, "***")
@@ -78,7 +78,7 @@ export function filterContent(original: string){
  * 空のPassThroughを生成します
  * @returns PassThrough
  */
-export function createPassThrough(opts: TransformOptions = {}): PassThrough{
+export function createPassThrough(opts: TransformOptions = {}): PassThrough {
   const logger = getLogger("PassThrough");
   const id = Date.now();
   logger.debug(`initialized (id: ${id})`);
@@ -103,7 +103,7 @@ export function createPassThrough(opts: TransformOptions = {}): PassThrough{
  * @param total 合計量
  * @returns 計算後のパーセンテージ
  */
-export function getPercentage(part: number, total: number){
+export function getPercentage(part: number, total: number) {
   return Math.round(part / total * 100 * 100) / 100;
 }
 
@@ -144,7 +144,7 @@ export function getResourceTypeFromUrl(url: string | null, { checkResponse }: { 
 export function getResourceTypeFromUrl(url: string | null, { checkResponse }: { checkResponse: true }): Promise<ResourceType>;
 export function getResourceTypeFromUrl(url: string | null, { checkResponse = false } = {}): ResourceType | Promise<ResourceType> {
   // check if the url variable is valid string object.
-  if(!url || typeof url !== "string"){
+  if (!url || typeof url !== "string") {
     return "none";
   }
 
@@ -153,7 +153,7 @@ export function getResourceTypeFromUrl(url: string | null, { checkResponse = fal
   // check if the url has a valid protocol and if its pathname ends with a valid extension.
   const urlIsHttp = urlObject.protocol === "http:" || urlObject.protocol === "https:";
 
-  if(!urlIsHttp){
+  if (!urlIsHttp) {
     return "none";
   }
 
@@ -163,12 +163,12 @@ export function getResourceTypeFromUrl(url: string | null, { checkResponse = fal
       ? "audio"
       : "none";
 
-  if(!checkResponse || typeInferredFromUrl === "none"){
+  if (!checkResponse || typeInferredFromUrl === "none") {
     return typeInferredFromUrl;
   }
 
   return requestHead(url).then(({ headers }) =>
-    headers["content-type"]?.startsWith(`${typeInferredFromUrl}/`) ? typeInferredFromUrl : "none"
+    headers["content-type"]?.startsWith(`${typeInferredFromUrl}/`) ? typeInferredFromUrl : "none",
   );
 }
 
@@ -178,7 +178,7 @@ export function getResourceTypeFromUrl(url: string | null, { checkResponse = fal
  * @param headers 追加のカスタムリクエストヘッダ
  * @returns ステータスコード
  */
-export function retrieveHttpStatusCode(url: string, headers?: { [key: string]: string }){
+export function retrieveHttpStatusCode(url: string, headers?: { [key: string]: string }) {
   return requestHead(url, headers).then(d => d.statusCode);
 }
 
@@ -188,7 +188,7 @@ export function retrieveHttpStatusCode(url: string, headers?: { [key: string]: s
  * @param headers 追加のカスタムリクエストヘッダ
  * @returns レスポンス
  */
-export function requestHead(url: string, headers: { [key: string]: string } = {}){
+export function requestHead(url: string, headers: { [key: string]: string } = {}) {
   return candyget("HEAD", url, "string", {
     headers: {
       "User-Agent": DefaultUserAgent,
@@ -206,7 +206,7 @@ const httpsAgent = new HttpsAgent({ keepAlive: false });
  * @param url URL
  * @returns Readableストリーム
  */
-export function downloadAsReadable(url: string, options: miniget.Options = { headers: { "User-Agent": DefaultUserAgent } }): Readable{
+export function downloadAsReadable(url: string, options: miniget.Options = { headers: { "User-Agent": DefaultUserAgent } }): Readable {
   const logger = getLogger("Util");
   return miniget(url, {
     maxReconnects: 10,
@@ -248,36 +248,36 @@ export async function retrieveRemoteAudioInfo(url: string): Promise<RemoteAudioI
     displayTitle: null,
   };
 
-  if(!ffmpegOut){
+  if (!ffmpegOut) {
     return result;
-  }else if(ffmpegOut.includes("HTTP error")){
+  } else if (ffmpegOut.includes("HTTP error")) {
     throw new Error("Failed to fetch data due to HTTP error.");
   }
 
-  if(durationMatcher.test(ffmpegOut)){
+  if (durationMatcher.test(ffmpegOut)) {
     const match = durationMatcher.exec(ffmpegOut)!;
     result.lengthSeconds = Math.ceil(
       match.groups!.length
         .split(":")
         .map(n => Number(n))
-        .reduce((prev, current) => prev * 60 + current)
+        .reduce((prev, current) => prev * 60 + current),
     ) || null;
   }
 
-  if(titleMatcher.test(ffmpegOut)){
+  if (titleMatcher.test(ffmpegOut)) {
     const match = titleMatcher.exec(ffmpegOut)!;
 
     result.title = match.groups!.title?.trim() || null;
   }
 
-  if(artistMatcher.test(ffmpegOut)){
+  if (artistMatcher.test(ffmpegOut)) {
     const match = artistMatcher.exec(ffmpegOut)!;
 
     result.artist = match.groups!.artist?.trim() || null;
   }
 
   // construct displayTitle
-  if(result.title){
+  if (result.title) {
     result.displayTitle = result.artist
       ? `${result.artist} - ${result.title}`
       : result.title;
@@ -286,7 +286,7 @@ export async function retrieveRemoteAudioInfo(url: string): Promise<RemoteAudioI
   return result;
 }
 
-function retrieveFFmpegStderrFromUrl(url: string, ffmpegPathGenerator: () => string){
+function retrieveFFmpegStderrFromUrl(url: string, ffmpegPathGenerator: () => string) {
   return new Promise<string>((resolve, reject) => {
     const ffmpegPath = ffmpegPathGenerator();
     let data = "";
@@ -298,7 +298,7 @@ function retrieveFFmpegStderrFromUrl(url: string, ffmpegPathGenerator: () => str
       stdio: ["ignore", "ignore", "pipe"],
     })
       .on("exit", () => {
-        if(data.length === 0){
+        if (data.length === 0) {
           reject(new Error("FFmpeg emit nothing."));
         }
 
@@ -351,7 +351,7 @@ const normalizeTemplate = [
 /**
  * 文字列を正規化します
  */
-export function normalizeText(rawText: string){
+export function normalizeText(rawText: string) {
   let result = rawText;
   normalizeTemplate.forEach(reg => {
     result = result.replace(reg.from, reg.to);
@@ -364,7 +364,7 @@ export function normalizeText(rawText: string){
  * @param predicate 待機完了かどうかを判定する関数
  * @param timeout 待機時間の最大値（タイムアウト時間）。設定しない場合はInfinityとします。
  * @param options 追加の設定
- * @returns 
+ * @returns
  */
 export function waitForEnteringState(predicate: () => boolean, timeout: number = 10 * 1000, options?: {
   /**
@@ -375,7 +375,7 @@ export function waitForEnteringState(predicate: () => boolean, timeout: number =
    * 与えられた判定関数を呼ぶ時間間隔をミリ秒単位で指定します。
    */
   timeStep?: number,
-}){
+}) {
   const { rejectOnTimeout, timeStep } = Object.assign({
     rejectOnTimeout: true,
     timeStep: 50,
@@ -383,22 +383,21 @@ export function waitForEnteringState(predicate: () => boolean, timeout: number =
   return new Promise<number>((resolve, reject) => {
     let count = 0;
     const startTime = Date.now();
-    if(predicate()){
+    if (predicate()) {
       resolve(0);
-    }else if(timeout < 50){
+    } else if (timeout < 50) {
       reject("timed out");
     }
     const ticker = setInterval(() => {
       count++;
-      if(predicate()){
+      if (predicate()) {
         clearInterval(ticker);
         resolve(Date.now() - startTime);
-      }else if(timeout <= timeStep * count){
+      } else if (timeout <= timeStep * count) {
         clearInterval(ticker);
-        if(rejectOnTimeout){
+        if (rejectOnTimeout) {
           reject(`target predicate has not return true in time (${timeout}ms) and timed out`);
-        }
-        else{
+        } else {
           resolve(Date.now() - startTime);
         }
       }
@@ -406,13 +405,12 @@ export function waitForEnteringState(predicate: () => boolean, timeout: number =
   });
 }
 
-export function createDebounceFunctionsFactroy<Key>(func: (key: Key) => void, debounceDelay: number){
-  // eslint-disable-next-line func-call-spacing
+export function createDebounceFunctionsFactroy<Key>(func: (key: Key) => void, debounceDelay: number) {
   const functionsStore = new Map<Key, () => void>();
   return (key: Key) => {
-    if(functionsStore.has(key)){
+    if (functionsStore.has(key)) {
       return functionsStore.get(key)!;
-    }else{
+    } else {
       const fn = debounce(debounceDelay, () => func(key));
       functionsStore.set(key, fn);
       return fn;
@@ -420,39 +418,70 @@ export function createDebounceFunctionsFactroy<Key>(func: (key: Key) => void, de
   };
 }
 
+type FragmentalDownloadStreamOptions = {
+  contentLength: number,
+  chunkSize?: number,
+  userAgent?: string,
+  pulseDownload?: boolean,
+};
+
 export function createFragmentalDownloadStream(
-  streamGenerator: string | ((start: number, end?: number) => Readable),
-  { chunkSize = 512 * 1024, contentLength, userAgent = SecondaryUserAgent }: { chunkSize?: number, contentLength: number, userAgent?: string },
-){
+  streamGenerator: string | ((start: number, end?: number) => Readable) | ((start: number, end?: number) => PromiseLike<Readable>),
+  {
+    contentLength,
+    chunkSize = 512 * 1024,
+    userAgent = SecondaryUserAgent,
+    pulseDownload = false,
+  }: FragmentalDownloadStreamOptions,
+) {
   const logger = getLogger("FragmentalDownloader", true);
   logger.addContext("id", Date.now());
 
   const stream = createPassThrough();
 
-  setImmediate(() => {
+  setImmediate(async () => {
     let current = -1;
 
-    if(contentLength < chunkSize){
+    if (contentLength < chunkSize) {
       const originStream = typeof streamGenerator === "string"
         ? downloadAsReadable(streamGenerator, {
           headers: {
             "User-Agent": userAgent,
           },
         })
-        : streamGenerator(0);
+        : await streamGenerator(0);
 
-      originStream
-        .on("error", er => stream.destroy(er))
-        .pipe(stream);
+      if (pulseDownload) {
+        const pulseBuffer = createPassThrough({ highWaterMark: Math.floor(chunkSize * 1.2) });
 
-      logger.info("Stream was created as a single stream");
-    }else{
-      const pipeNextStream = () => {
+        originStream
+          .on("request", logger.trace)
+          .on("response", res => res.once("close", () => logger.trace("Response closed")))
+          .on("end", () => logger.trace("Origin stream ended"))
+          .on("error", er => destroyStream(pulseBuffer, er))
+          .pipe(pulseBuffer)
+          .on("error", er => destroyStream(stream, er))
+          .once("close", () => destroyStream(originStream))
+          .pipe(stream)
+          .once("close", () => destroyStream(pulseBuffer));
+      } else {
+        originStream
+          .on("request", logger.trace)
+          .on("response", res => res.once("close", () => logger.trace("Response closed")))
+          .on("end", () => logger.trace("Origin stream ended"))
+          .on("error", er => stream.destroy(er))
+          .pipe(stream);
+      }
+
+      logger.info(`Stream was created as a single stream. (buffer: ${chunkSize} / content length: ${contentLength})`);
+    } else {
+      let onCloseHandler = () => {};
+      const pipeNextStream = async () => {
         current++;
 
         let end: number | undefined = chunkSize * (current + 1) - 1;
 
-        if(end >= contentLength){
+        if (end >= contentLength) {
           end = undefined;
         }
 
@@ -463,21 +492,46 @@ export function createFragmentalDownloadStream(
               "Range": `bytes=${chunkSize * current}-${end ? end : ""}`,
             },
           })
-          : streamGenerator(chunkSize * current, end);
+          : await streamGenerator(chunkSize * current, end);
         logger.info(`Stream #${current + 1} was created`);
 
-        nextStream
-          .on("error", er => stream.destroy(er))
-          .pipe(stream, { end: end === undefined });
+        let pulseBuffer: PassThrough | null = null;
 
-        if(end !== undefined){
-          nextStream.on("end", () => pipeNextStream());
-        }else{
+        if (onCloseHandler) {
+          stream.off("close", onCloseHandler);
+        }
+
+        if (pulseDownload) {
+          pulseBuffer = createPassThrough({ highWaterMark: Math.floor(chunkSize * 1.2) });
+
+          nextStream
+            .on("request", logger.trace)
+            .on("response", res => res.once("close", () => logger.trace("Response closed")))
+            .on("end", () => logger.trace("Origin stream ended"))
+            .on("error", er => destroyStream(pulseBuffer!, er))
+            .pipe(pulseBuffer)
+            .on("error", er => destroyStream(stream, er))
+            .once("close", () => destroyStream(nextStream))
+            .pipe(stream, { end: end === undefined })
+            .once("close", onCloseHandler = () => destroyStream(pulseBuffer!));
+        } else {
+          nextStream
+            .on("request", logger.trace)
+            .on("response", res => res.once("close", () => logger.trace("Response closed")))
+            .on("end", () => logger.trace("Origin stream ended"))
+            .on("error", er => destroyStream(stream, er))
+            .pipe(stream, { end: end === undefined })
+            .once("close", onCloseHandler = () => destroyStream(nextStream));
+        }
+
+        if (end !== undefined) {
+          (pulseBuffer || nextStream).on("end", () => pipeNextStream());
+        } else {
           logger.info(`Last stream (total: ${current + 1})`);
         }
       };
 
-      pipeNextStream();
+      pipeNextStream().catch(logger.warn);
 
       logger.info(`Stream was created as partial stream. ${Math.ceil(contentLength / chunkSize)} streams will be created.`);
     }
@@ -486,10 +540,9 @@ export function createFragmentalDownloadStream(
 }
 
 export function requireIfAny(id: string): unknown {
-  try{
+  try {
     return require(id);
-  }
-  catch(e){
+  } catch (e) {
     const logger = getLogger("Util");
 
     logger.info(`The module "${id}" couldn't be loaded because of the error: ${stringifyObject(e)}`);
@@ -498,48 +551,6 @@ export function requireIfAny(id: string): unknown {
   }
 }
 
-interface UnsafeTraverseState<T> {
-  value: T;
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  getProperty: <U = any>(name: keyof T | (string & {})) => UnsafeTraverseState<U | undefined>;
-  select: <U = any>(selector: (current: T) => U | undefined | null) => UnsafeTraverseState<U | undefined>;
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  execute: <U extends keyof T | (string & {})>(func: U) => T extends undefined
-    ? () => UnsafeTraverseState<undefined>
-    : T extends { [key in U]: (...args: any[]) => any }
-      ? (...args: Parameters<T[U]>) => UnsafeTraverseState<ReturnType<T[U]>>
-      : (..._: any[]) => UnsafeTraverseState<undefined>;
-  action: (action: (value: T) => void) => UnsafeTraverseState<T>;
-}
-
-export function unsafeTraverseFrom<S>(obj: S){
-  const createState: <T = any> (value: T) => UnsafeTraverseState<T> = <T = any> (value: T) => ({
-    value,
-    getProperty: <U = any>(name: string) => value
-      ? createState<U | undefined>(value[name as keyof typeof value] as U | null | undefined || undefined)
-      : undefinedState,
-    select: <U = any>(selector: (current: T) => U | undefined | null) => value
-      ? createState<U | undefined>(selector(value) || undefined)
-      : undefinedState,
-    // eslint-disable-next-line @typescript-eslint/ban-types
-    execute: <U extends keyof T | (string & {})>(func: U) => (!value
-      ? () => undefinedState
-      // @ts-expect-error
-      : typeof value[func] === "function"
-        // @ts-expect-error
-        ? (...args: Parameters<T[U]>) => createState<ReturnType<T[U]>>(value[func](...args))
-        : (..._: any[]) => undefinedState) as any,
-    action: (action: (value: T) => void) => {
-      action(value);
-      return createState(value);
-    },
-  });
-
-  const undefinedState = createState(undefined);
-
-  return createState<S>(obj);
-}
-
-export function assertIs<T>(obj: unknown): asserts obj is T{}
+export function assertIs<T>(obj: unknown): asserts obj is T {}
 
 export function assertIsNotNull<T>(obj: T | null): asserts obj is T {}

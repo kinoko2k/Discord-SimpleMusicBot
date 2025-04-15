@@ -1,18 +1,18 @@
 /*
- * Copyright 2021-2024 mtripg6666tdr
- * 
- * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
+ * Copyright 2021-2025 mtripg6666tdr
+ *
+ * This file is part of mtripg6666tdr/Discord-SimpleMusicBot.
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
- * 
- * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it 
- * under the terms of the GNU General Public License as published by the Free Software Foundation, 
+ *
+ * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  *
- * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot. 
+ * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot.
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
@@ -26,22 +26,22 @@ import { getCommandExecutionContext } from "../Commands";
 export class Streamable extends AudioSource<string, StreamableJsonFormat> {
   protected streamUrl = "";
 
-  async init(url: string, prefetched: StreamableJsonFormat | null){
+  async init(url: string, prefetched: StreamableJsonFormat | null) {
     this.url = url;
     const id = StreamableApi.getVideoId(url);
-    if(!id) throw new Error("Invalid streamable url");
-    if(prefetched){
+    if (!id) throw new Error("Invalid streamable url");
+    if (prefetched) {
       this.lengthSeconds = prefetched.length;
       this.thumbnail = prefetched.thumbnail;
       this.title = prefetched.title;
       this.streamUrl = prefetched.streamUrl;
-    }else{
+    } else {
       const streamInfo = await StreamableApi.getVideoDetails(id);
       this.lengthSeconds = Math.floor(streamInfo.files["mp4-mobile"].duration);
       this.thumbnail = "https:" + streamInfo.thumbnail_url;
       this.title = streamInfo.title;
       const streamUrl = streamInfo.files["mp4-mobile"].url;
-      if(!streamUrl){
+      if (!streamUrl) {
         throw new Error("Invalid streamable url.");
       }
       this.streamUrl = streamUrl;
@@ -49,7 +49,7 @@ export class Streamable extends AudioSource<string, StreamableJsonFormat> {
     return this;
   }
 
-  async fetch(): Promise<UrlStreamInfo>{
+  async fetch(): Promise<UrlStreamInfo> {
     return {
       type: "url",
       streamType: "mp4",
@@ -57,7 +57,7 @@ export class Streamable extends AudioSource<string, StreamableJsonFormat> {
     };
   }
 
-  toField(){
+  toField() {
     const { t } = getCommandExecutionContext();
 
     return [
@@ -71,11 +71,11 @@ export class Streamable extends AudioSource<string, StreamableJsonFormat> {
     ];
   }
 
-  npAdditional(){
+  npAdditional() {
     return "";
   }
 
-  exportData(): StreamableJsonFormat{
+  exportData(): StreamableJsonFormat {
     return {
       url: this.url,
       length: this.lengthSeconds,
@@ -102,14 +102,14 @@ export abstract class StreamableApi {
    */
   static getVideoId(url: string): string | null {
     const match = url.match(/^https?:\/\/streamable.com\/(?<Id>.+)$/);
-    if(match){
+    if (match) {
       return match.groups?.Id || null;
-    }else{
+    } else {
       return null;
     }
   }
 
-  static async getVideoDetails(id: string): Promise<StreamableAPIResult>{
+  static async getVideoDetails(id: string): Promise<StreamableAPIResult> {
     return candyget.json(`https://api.streamable.com/videos/${id}`).then(({ body }) => body as StreamableAPIResult);
   }
 }
@@ -132,9 +132,9 @@ export interface StreamableAPIResult {
 }
 
 interface Files {
-  mp4: Mp4;
+  "mp4": Mp4;
   "mp4-mobile": Mp4;
-  original: Mp4;
+  "original": Mp4;
 }
 
 interface Mp4 {

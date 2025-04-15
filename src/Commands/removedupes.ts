@@ -1,18 +1,18 @@
 /*
- * Copyright 2021-2024 mtripg6666tdr
- * 
- * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
+ * Copyright 2021-2025 mtripg6666tdr
+ *
+ * This file is part of mtripg6666tdr/Discord-SimpleMusicBot.
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
- * 
- * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it 
- * under the terms of the GNU General Public License as published by the Free Software Foundation, 
+ *
+ * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  *
- * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot. 
+ * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot.
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
@@ -22,7 +22,7 @@ import type { CommandMessage } from "../Component/commandResolver/CommandMessage
 import { BaseCommand } from ".";
 
 export default class RmDuplicated extends BaseCommand {
-  constructor(){
+  constructor() {
     super({
       alias: ["removedupes", "rmdupes", "rmduplicated", "removeduplicates", "drm"],
       unlist: false,
@@ -33,7 +33,7 @@ export default class RmDuplicated extends BaseCommand {
   }
 
   @BaseCommand.updateBoundChannel
-  async run(message: CommandMessage, context: CommandArgs){
+  async run(message: CommandMessage, context: CommandArgs) {
     const { t } = context;
 
     // 削除するアイテムのリストを作成
@@ -41,9 +41,9 @@ export default class RmDuplicated extends BaseCommand {
     const indexes: number[] = [];
     const itemUrl: string[] = [];
     q.forEach((item, i) => {
-      if(itemUrl.includes(item.basicInfo.url)){
+      if (itemUrl.includes(item.basicInfo.url)) {
         indexes.push(i);
-      }else{
+      } else {
         itemUrl.push(item.basicInfo.url);
       }
     });
@@ -51,24 +51,24 @@ export default class RmDuplicated extends BaseCommand {
       new Set(
         indexes
           .filter(n => !isNaN(n))
-          .sort((a, b) => b - a)
-      )
+          .sort((a, b) => b - a),
+      ),
     );
 
     // 削除を実行する
     const actualDeleted = [] as number[];
     const failed = [] as number[];
     let firstItemTitle = null;
-    for(let i = 0; i < dels.length; i++){
+    for (let i = 0; i < dels.length; i++) {
       const item = q.get(dels[i]);
       q.removeAt(dels[i]);
       actualDeleted.push(dels[i]);
-      if(actualDeleted.length === 1){
+      if (actualDeleted.length === 1) {
         firstItemTitle = item.basicInfo.title;
       }
     }
 
-    if(actualDeleted.length > 0){
+    if (actualDeleted.length > 0) {
       const title = actualDeleted.length === 1 ? firstItemTitle : null;
       const resultStr = actualDeleted.sort((a, b) => a - b).join(",");
       const failedStr = failed.sort((a, b) => a - b).join(",");
@@ -81,7 +81,7 @@ export default class RmDuplicated extends BaseCommand {
           failed.length > 0
             ? `\r\n:warning:${failed.length > 100 ? "一部" : `${failedStr}番目`}の曲は権限がないため削除できませんでした。`
             : ""
-        }`
+        }`,
       ).catch(this.logger.error);
       message.reply(
         `🚮${
@@ -94,9 +94,9 @@ export default class RmDuplicated extends BaseCommand {
             : failed.length > 0
               ? `\r\n${t("commands:remove.unableToRemoveAt", { indexes: failedStr })}`
               : ""
-        }`
+        }`,
       ).catch(this.logger.error);
-    }else{
+    } else {
       message.reply(t("commands:removedupes.noSongRemoved")).catch(this.logger.error);
     }
   }

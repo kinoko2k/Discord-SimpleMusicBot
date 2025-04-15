@@ -1,18 +1,18 @@
 /*
- * Copyright 2021-2024 mtripg6666tdr
- * 
- * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
+ * Copyright 2021-2025 mtripg6666tdr
+ *
+ * This file is part of mtripg6666tdr/Discord-SimpleMusicBot.
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
- * 
- * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it 
- * under the terms of the GNU General Public License as published by the Free Software Foundation, 
+ *
+ * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  *
- * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot. 
+ * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot.
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
@@ -26,7 +26,7 @@ import * as Util from "../Util";
 import { getColor } from "../Util/color";
 
 export default class NowPlaying extends BaseCommand {
-  constructor(){
+  constructor() {
     super({
       alias: ["今の曲", "nowplaying", "np"],
       unlist: false,
@@ -42,11 +42,11 @@ export default class NowPlaying extends BaseCommand {
   }
 
   @BaseCommand.updateBoundChannel
-  async run(message: CommandMessage, context: CommandArgs){
+  async run(message: CommandMessage, context: CommandArgs) {
     const { t } = context;
 
     // そもそも再生状態じゃないよ...
-    if(!context.server.player.isPlaying){
+    if (!context.server.player.isPlaying) {
       message.reply(t("notPlaying")).catch(this.logger.error);
       return;
     }
@@ -60,7 +60,7 @@ export default class NowPlaying extends BaseCommand {
     const [tmin, tsec] = Util.time.calcMinSec(totalDurationSeconds);
     const info = context.server.player.currentAudioInfo!;
     let progressBar = "";
-    if(totalDurationSeconds > 0){
+    if (totalDurationSeconds > 0) {
       const progress = Math.floor(currentTimeSeconds / totalDurationSeconds * 20);
       progressBar += "=".repeat(progress > 0 ? progress - 1 : 0);
       progressBar += "●";
@@ -81,19 +81,19 @@ export default class NowPlaying extends BaseCommand {
           info.isYouTube() && info.isLiveStream
             ? `(${t("liveStream")})`
             : ` \`${min}:${sec}/${totalDurationSeconds === 0 ? `(${t("unknown")})` : `${tmin}:${tsec}\``}`
-        }`
+        }`,
       );
 
-    if(!info.isPrivateSource){
+    if (!info.isPrivateSource) {
       embed
         .setFields(...info.toField(["long", "l", "verbose", "l", "true"].some(arg => context.args[0] === arg)))
         .addField(":link:URL", info.url);
     }
 
-    if(typeof info.thumbnail === "string"){
+    if (typeof info.thumbnail === "string") {
       embed.setThumbnail(info.thumbnail);
       await message.reply({ embeds: [embed.toOceanic()] }).catch(this.logger.error);
-    }else{
+    } else {
       embed.setThumbnail("attachment://thumbnail." + info.thumbnail.ext);
       await message.reply({
         embeds: [embed.toOceanic()],

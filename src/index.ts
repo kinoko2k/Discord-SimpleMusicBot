@@ -1,18 +1,18 @@
 /*
- * Copyright 2021-2024 mtripg6666tdr
- * 
- * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
+ * Copyright 2021-2025 mtripg6666tdr
+ *
+ * This file is part of mtripg6666tdr/Discord-SimpleMusicBot.
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
- * 
- * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it 
- * under the terms of the GNU General Public License as published by the Free Software Foundation, 
+ *
+ * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  *
- * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot. 
+ * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot.
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
@@ -43,15 +43,17 @@ const bot = new MusicBot(process.env.TOKEN, Boolean(config.maintenance));
 let server: http.Server | null = null;
 
 // Webサーバーのインスタンス化
-if(config.webserver){
+if (config.webserver) {
   server = createServer(bot.client, Number(process.env.PORT) || 8081);
-}else{
+} else {
   logger.info("Skipping to start server");
 }
 
-if(config.debug){
-  process.on("uncaughtException", async (error)=>{
-    if(bot.client){
+if (config.debug) {
+  Error.stackTraceLimit = 50;
+
+  process.on("uncaughtException", async error => {
+    if (bot.client) {
       await reportError(error);
     }
     logger.fatal(error);
@@ -62,19 +64,19 @@ if(config.debug){
 
     process.exit(1);
   });
-}else{
+} else {
   // ハンドルされなかったエラーのハンドル
-  process.on("uncaughtException", async (error)=>{
+  process.on("uncaughtException", async error => {
     logger.fatal(error);
-    if(bot.client){
+    if (bot.client) {
       await reportError(error);
     }
   });
 }
 
 let terminating = false;
-const onTerminated = async function(code: string){
-  if(terminating) return;
+const onTerminated = async function(code: string) {
+  if (terminating) return;
 
   terminating = true;
 
@@ -82,19 +84,19 @@ const onTerminated = async function(code: string){
 
   await bot.stop();
 
-  if(server && server.listening){
+  if (server && server.listening) {
     logger.info("Shutting down the server...");
     await new Promise(resolve => server.close(resolve));
   }
 
   // 強制終了を報告
-  if(bot.client && config.errorChannel){
+  if (bot.client && config.errorChannel) {
     bot.client.rest.channels.createMessage(config.errorChannel, {
       content: "Process terminated",
     }).catch(() => {});
   }
 
-  if(global.workerThread){
+  if (global.workerThread) {
     logger.info("Shutting down worker...");
     await global.workerThread.terminate();
   }
@@ -102,7 +104,7 @@ const onTerminated = async function(code: string){
   logger.info("Shutting down completed");
 
   log4js.shutdown(er => {
-    if(er){
+    if (er) {
       console.error(er);
     }
   });
@@ -118,21 +120,20 @@ const onTerminated = async function(code: string){
 });
 
 logger.info("Loading locales...");
-// eslint-disable-next-line @typescript-eslint/no-floating-promises
+
 initLocalization(config.debug, config.defaultLanguage).then(() => {
   // ボット開始
   bot.run();
 });
 
-async function reportError(err: any){
-  if(!config.errorChannel) return;
+async function reportError(err: any) {
+  if (!config.errorChannel) return;
 
-  try{
+  try {
     await bot.client.rest.channels.createMessage(config.errorChannel, {
       content: stringifyObject(err),
     }).catch(() => {});
-  }
-  catch(e){
+  } catch (e) {
     logger.error(e);
   }
 }

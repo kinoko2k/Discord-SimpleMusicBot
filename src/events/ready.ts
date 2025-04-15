@@ -1,18 +1,18 @@
 /*
- * Copyright 2021-2024 mtripg6666tdr
- * 
- * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
+ * Copyright 2021-2025 mtripg6666tdr
+ *
+ * This file is part of mtripg6666tdr/Discord-SimpleMusicBot.
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
- * 
- * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it 
- * under the terms of the GNU General Public License as published by the Free Software Foundation, 
+ *
+ * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  *
- * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot. 
+ * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot.
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
@@ -26,11 +26,11 @@ import { getConfig } from "../config";
 
 const config = getConfig();
 
-export async function onReady(this: MusicBot){
+export async function onReady(this: MusicBot) {
   const client = this._client;
   this.logger.info("Socket connection is ready now");
 
-  if(this["_isReadyFinished"]){
+  if (this["_isReadyFinished"]) {
     return;
   }
 
@@ -39,14 +39,14 @@ export async function onReady(this: MusicBot){
   this.logger.info("Starting environment checking and preparation.");
 
   // Set activity as booting
-  if(!this.maintenance){
+  if (!this.maintenance) {
     client.editStatus("dnd", [
       {
         type: discord.ActivityTypes.GAME,
         name: i18next.t("startingUp"),
       },
     ]).catch(this.logger.error);
-  }else{
+  } else {
     client.editStatus("dnd", [
       {
         type: discord.ActivityTypes.GAME,
@@ -59,10 +59,10 @@ export async function onReady(this: MusicBot){
   await CommandManager.instance.sync(this.client);
 
   // add bgm tracks
-  if(config.bgm){
+  if (config.bgm) {
     const guildIds = Object.keys(config.bgm);
-    for(let i = 0; i < guildIds.length; i++){
-      if(!this.client.guilds.get(guildIds[i])) continue;
+    for (let i = 0; i < guildIds.length; i++) {
+      if (!this.client.guilds.get(guildIds[i])) continue;
       await this
         .initDataWithBgm(guildIds[i], "0", config.bgm[guildIds[i]])
         .initBgmTracks()
@@ -71,31 +71,30 @@ export async function onReady(this: MusicBot){
   }
 
   // Recover queues
-  if(this.backupper){
+  if (this.backupper) {
     const joinedGuildIds = [...client.guilds.values()].map(guild => guild.id);
     const guildQueues = await this.backupper.getQueueDataFromBackup(joinedGuildIds);
     const guildStatuses = await this.backupper.getStatusFromBackup(joinedGuildIds);
-    if(guildQueues && guildStatuses){
+    if (guildQueues && guildStatuses) {
       const guildQueueIds = [...guildQueues.keys()];
       const guildStatusIds = [...guildStatuses.keys()];
-      for(let i = 0; i < guildQueueIds.length; i++){
+      for (let i = 0; i < guildQueueIds.length; i++) {
         const id = guildQueueIds[i];
-        if(guildStatusIds.includes(id)){
-          try{
+        if (guildStatusIds.includes(id)) {
+          try {
             const server = this.upsertData(id, guildStatuses.get(id)!.boundChannelId);
             await server.importQueue(guildQueues.get(id)!);
             server.importStatus(guildStatuses.get(id)!);
-          }
-          catch(e){
+          } catch (e) {
             this.logger.warn(e);
           }
         }
       }
       this.logger.info("Finish recovery of queues and statuses.");
     }
-  }else{
+  } else {
     this.logger.warn(
-      "Unable to recover queues and statuses."
+      "Unable to recover queues and statuses.",
     );
   }
 
@@ -113,13 +112,30 @@ export async function onReady(this: MusicBot){
   this.emit("ready");
   this.logger.info("Bot is ready now");
 
-  // Set activity
-  if(!this.maintenance){
-    client.editStatus("online", [
-      {
-        type: discord.ActivityTypes.LISTENING,
-        name: i18next.t("music"),
-      },
-    ]).catch(this.logger.error);
+  if (!this.maintenance) {
+    if (config.showGuildCountStatus) {
+      // Set activity with VC and guild count
+      const updateActivity = async () => {
+        const voiceConnectionsCount = this.client.voiceConnections.size;
+        const guildsCount = this.client.guilds.size;
+        await client.editStatus("online", [
+          {
+            type: discord.ActivityTypes.LISTENING,
+            name: `${voiceConnectionsCount}/${guildsCount} Servers`,
+          },
+        ]).catch(this.logger.error);
+      };
+
+      await updateActivity();
+      this.on("tick", updateActivity);
+    } else {
+      // Show normal 'playing music' status
+      await client.editStatus("online", [
+        {
+          type: discord.ActivityTypes.LISTENING,
+          name: i18next.t("music"),
+        },
+      ]).catch(this.logger.error);
+    }
   }
 }

@@ -1,18 +1,18 @@
 /*
- * Copyright 2021-2024 mtripg6666tdr
- * 
- * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
+ * Copyright 2021-2025 mtripg6666tdr
+ *
+ * This file is part of mtripg6666tdr/Discord-SimpleMusicBot.
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
- * 
- * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it 
- * under the terms of the GNU General Public License as published by the Free Software Foundation, 
+ *
+ * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  *
- * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot. 
+ * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot.
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
@@ -28,7 +28,7 @@ import * as Util from "../Util";
 import { getLogger } from "../logger";
 
 export default class Frame extends BaseCommand {
-  constructor(){
+  constructor() {
     super({
       alias: ["frame", "キャプチャ", "capture"],
       unlist: false,
@@ -46,46 +46,46 @@ export default class Frame extends BaseCommand {
   }
 
   @BaseCommand.updateBoundChannel
-  async run(message: CommandMessage, context: CommandArgs){
+  async run(message: CommandMessage, context: CommandArgs) {
     const { t } = context;
 
     const server = context.server;
 
     // そもそも再生状態ではない場合
-    if(!server.player.isConnecting || !server.player.isPlaying){
+    if (!server.player.isConnecting || !server.player.isPlaying) {
       await message.reply(t("notPlaying")).catch(this.logger.error);
       return;
     }
 
     const vinfo = server.player.currentAudioInfo!;
-    if(!vinfo.isYouTube()){
+    if (!vinfo.isYouTube()) {
       await message.reply(`:warning:${t("commands:frame.unsupported")}`).catch(this.logger.error);
       return;
-    }else if(vinfo.isFallbacked){
+    } else if (vinfo.isFallbacked) {
       await message.reply(`:warning:${t("commands:frame.fallbacking")}`).catch(this.logger.error);
       return;
     }
 
-    const time = (function(rawTime){
-      if(rawTime === "" || vinfo.isLiveStream) return server.player.currentTime / 1000;
-      else if(rawTime.match(/^(\d+:)*\d+(\.\d+)?$/)) return rawTime.split(":").map(n => Number(n))
+    const time = (function(rawTime) {
+      if (rawTime === "" || vinfo.isLiveStream) return server.player.currentTime / 1000;
+      else if (rawTime.match(/^(\d+:)*\d+(\.\d+)?$/)) return rawTime.split(":").map(n => Number(n))
         .reduce((prev, current) => prev * 60 + current);
       else return NaN;
     }(context.rawArgs));
 
-    if(context.rawArgs !== "" && vinfo.isLiveStream){
+    if (context.rawArgs !== "" && vinfo.isLiveStream) {
       await message.channel.createMessage({
         content: t("commands:frame.liveStreamWithTime"),
       });
       return;
     }
 
-    if(!vinfo.isLiveStream && (isNaN(time) || time > vinfo.lengthSeconds)){
+    if (!vinfo.isLiveStream && (isNaN(time) || time > vinfo.lengthSeconds)) {
       await message.reply(`:warning: ${t("commands:frame.invalidTime")}`).catch(this.logger.error);
       return;
     }
 
-    try{
+    try {
       const [hour, min, sec] = Util.time.calcHourMinSec(time, { fixedLength: 2 });
       const response = await message.reply(`:camera_with_flash: ${t("commands:frame.capturing")}...`);
       const { url, ua } = await vinfo.fetchVideo();
@@ -107,8 +107,7 @@ export default class Frame extends BaseCommand {
           : `(${t("commands:frame.timeAt", { hour, min, sec })})`
         }`,
       });
-    }
-    catch(e){
+    } catch (e) {
       this.logger.error(e);
       await message.channel.createMessage({
         content: `:sob:${t("commands:frame.failed")}`,
@@ -117,7 +116,7 @@ export default class Frame extends BaseCommand {
   }
 }
 
-function getFrame(url: string, time: number, ua: string){
+function getFrame(url: string, time: number, ua: string) {
   const logger = getLogger("FFmpeg");
   return new Promise<Buffer>((resolve, reject) => {
     const args = [
@@ -135,16 +134,16 @@ function getFrame(url: string, time: number, ua: string){
     const ffmpeg = new FFmpeg({ args });
     ffmpeg.process.stderr?.on("data", logger.debug);
     ffmpeg
-      .on("error", (er) => {
-        if(!ffmpeg.destroyed) ffmpeg.destroy(er);
+      .on("error", er => {
+        if (!ffmpeg.destroyed) ffmpeg.destroy(er);
         reject(er);
       })
-      .on("data", (chunks) => {
+      .on("data", chunks => {
         bufs.push(chunks);
       })
       .on("end", () => {
         resolve(Buffer.concat(bufs));
-        if(!ffmpeg.destroyed) ffmpeg.destroy();
+        if (!ffmpeg.destroyed) ffmpeg.destroy();
       })
     ;
   });

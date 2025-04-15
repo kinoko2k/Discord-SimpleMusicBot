@@ -1,18 +1,18 @@
 /*
- * Copyright 2021-2024 mtripg6666tdr
- * 
- * This file is part of mtripg6666tdr/Discord-SimpleMusicBot. 
+ * Copyright 2021-2025 mtripg6666tdr
+ *
+ * This file is part of mtripg6666tdr/Discord-SimpleMusicBot.
  * (npm package name: 'discord-music-bot' / repository url: <https://github.com/mtripg6666tdr/Discord-SimpleMusicBot> )
- * 
- * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it 
- * under the terms of the GNU General Public License as published by the Free Software Foundation, 
+ *
+ * mtripg6666tdr/Discord-SimpleMusicBot is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  *
- * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ * mtripg6666tdr/Discord-SimpleMusicBot is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot. 
+ * You should have received a copy of the GNU General Public License along with mtripg6666tdr/Discord-SimpleMusicBot.
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
@@ -26,7 +26,7 @@ import { BaseCommand } from ".";
 import { CommandMessage } from "../Component/commandResolver/CommandMessage";
 
 export default class PlayPrivate extends BaseCommand {
-  constructor(){
+  constructor() {
     super({
       unlist: false,
       alias: ["play_private"],
@@ -38,16 +38,16 @@ export default class PlayPrivate extends BaseCommand {
     });
   }
 
-  protected override async run(message: CommandMessage, context: Readonly<CommandArgs>){
+  protected override async run(message: CommandMessage, context: Readonly<CommandArgs>) {
     const { t } = context;
 
-    if(message["isMessage"] || !message["_interaction"]){
+    if (message["isMessage"] || !message["_interaction"]) {
       await message.reply(`:x: ${t("commands:play_private.noInteraction")}`).catch(this.logger.error);
       return;
     }
 
     const interaction = message["_interaction"];
-    if(interaction.type !== InteractionTypes.APPLICATION_COMMAND) return;
+    if (interaction.type !== InteractionTypes.APPLICATION_COMMAND) return;
     await interaction.createModal({
       title: t("commands:play_private.modalTitle"),
       customID: "play_private",
@@ -69,10 +69,10 @@ export default class PlayPrivate extends BaseCommand {
     }).catch(this.logger.error);
   }
 
-  override async handleModalSubmitInteraction(interaction: ModalSubmitInteraction<AnyTextableGuildChannel>, server: GuildDataContainer){
+  override async handleModalSubmitInteraction(interaction: ModalSubmitInteraction<AnyTextableGuildChannel>, server: GuildDataContainer) {
     const value = interaction.data.components.getTextInput("url");
 
-    if(value){
+    if (value) {
       const message = CommandMessage.createFromInteraction(interaction, "play_private", [value], value);
 
       const items = await server.playFromUrl(
@@ -81,7 +81,7 @@ export default class PlayPrivate extends BaseCommand {
         { privateSource: true },
       );
 
-      if(items.length <= 0 || !await server.joinVoiceChannel(message, {})){
+      if (items.length <= 0 || !await server.joinVoiceChannel(message, {})) {
         return;
       }
 
