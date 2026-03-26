@@ -16,39 +16,76 @@
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
+import type { YouTubeJsonFormat } from "..";
 import type { Cache, StrategyFetchResult } from "./base";
 import type { ReadableStreamInfo, StreamInfo, UrlStreamInfo } from "../../audiosource";
 import type { Readable } from "stream";
-import type { YT } from "youtubei.js";
+import type { YT, Types as YTTypes } from "youtubei.js" with { "resolution-mode": "import" };
 
 import path from "path";
+import vm from "vm";
 
 import { getURLVideoID } from "@distube/ytdl-core";
-import { Innertube, UniversalCache, YTNodes } from "youtubei.js";
 
-import { type YouTubeJsonFormat } from "..";
 import { Strategy } from "./base";
 import { createFragmentalDownloadStream } from "../../../Util";
 import { getConfig } from "../../../config";
 import { DefaultAudioThumbnailURL, SecondaryUserAgent } from "../../../definition";
 import { getTrustedSession } from "../session";
-export type youtubei = "youtubei";
-export const youtubei: youtubei = "youtubei";
+
+let { Innertube, UniversalCache, YTNodes, YT: { VideoInfo } } = { YT: {} } as unknown as typeof import("youtubei.js", { with: { "resolution-mode": "import" } });
+
+import("youtubei.js").then(mod => {
+  Innertube = mod.Innertube;
+  UniversalCache = mod.UniversalCache;
+  YTNodes = mod.YTNodes;
+  VideoInfo = mod.YT.VideoInfo;
+}).catch(() => {});
+
+import("youtubei.js/web").then(({ Platform }) => {
+  // https://ytjs.dev/guide/getting-started.html#providing-a-custom-javascript-interpreter
+  Platform.shim.eval = function(data: YTTypes.BuildScriptResult, env: Record<string, YTTypes.VMPrimative>) {
+    const properties = [];
+
+    if (env.n) {
+      properties.push(`n: exportedVars.nFunction("${env.n}")`);
+    }
+
+    if (env.sig) {
+      properties.push(`sig: exportedVars.sigFunction("${env.sig}")`);
+    }
+
+    const code = `${data.output}\nreturn { ${properties.join(", ")} }`;
+
+    const script = new vm.Script(`(function(){${code}})()`);
+
+    return script.runInNewContext();
+  };
+}).catch(() => {});
 
 const config = getConfig();
 
-type youtubeiCache = Cache<youtubei, YT.VideoInfo>;
+export type youtubei = "youtubei";
+export const youtubei: youtubei = "youtubei";
 
-export class youtubeiStrategy extends Strategy<youtubeiCache, YT.VideoInfo> {
-  protected _client: Innertube | null = null;
+export abstract class baseYoutubeiStrategy extends Strategy<Cache<youtubei, YT.VideoInfo>, YT.VideoInfo> {
+  protected _client: InstanceType<typeof Innertube> | null = null;
+
+  constructor(priority: number, protected id: youtubei, protected client: YTTypes.InnerTubeClient) {
+    super(priority);
+  }
 
   get cacheType() {
-    return youtubei;
+    return this.id;
   }
 
   async getClient() {
     if (this._client) {
       return this._client;
+    }
+
+    if (!Innertube || !UniversalCache || !YTNodes) {
+      throw new Error("YouTube API client not initialized. This is likely due to a failed import.");
     }
 
     const trustedSession = await getTrustedSession();
@@ -68,20 +105,20 @@ export class youtubeiStrategy extends Strategy<youtubeiCache, YT.VideoInfo> {
     this.logStrategyUsed();
 
     const client = await this.getClient();
-    const info = await client.getInfo(getURLVideoID(url));
+    const info = await client.getInfo(getURLVideoID(url), { client: this.client });
 
     return {
       data: this.mapToExportable(url, info),
       cache: {
-        type: youtubei,
+        type: this.id,
         data: info,
       },
     };
   }
 
-  async fetch(url: string, forceurl: true, cache?: Cache<any, any>): Promise<StrategyFetchResult<youtubeiCache, UrlStreamInfo>>;
-  async fetch(url: string, forceurl?: boolean, cache?: Cache<any, any>): Promise<StrategyFetchResult<youtubeiCache, StreamInfo>>;
-  async fetch(url: string, forceUrl: boolean = false, cache?: Cache<any, any>): Promise<StrategyFetchResult<youtubeiCache, StreamInfo>> {
+  async fetch(url: string, forceurl: true, cache?: Cache<any, any>): Promise<StrategyFetchResult<Cache<youtubei, YT.VideoInfo>, UrlStreamInfo>>;
+  async fetch(url: string, forceurl?: boolean, cache?: Cache<any, any>): Promise<StrategyFetchResult<Cache<youtubei, YT.VideoInfo>, StreamInfo>>;
+  async fetch(url: string, forceUrl: boolean = false, cache?: Cache<any, any>): Promise<StrategyFetchResult<Cache<youtubei, YT.VideoInfo>, StreamInfo>> {
     this.logStrategyUsed();
 
     const availableCache = this.cacheIsValid(cache) && cache.data;
@@ -89,7 +126,7 @@ export class youtubeiStrategy extends Strategy<youtubeiCache, YT.VideoInfo> {
     this.logger.info(availableCache ? "using cache without obtaining" : "obtaining info");
 
     const client = await this.getClient();
-    const info = availableCache || await client.getInfo(getURLVideoID(url));
+    const info = availableCache || await client.getInfo(getURLVideoID(url), { client: this.client });
 
     const format = info.basic_info.is_live
       ? info.streaming_data?.adaptive_formats.filter(f => f.has_audio)[0]
@@ -120,22 +157,26 @@ export class youtubeiStrategy extends Strategy<youtubeiCache, YT.VideoInfo> {
       }) as YouTubeJsonFormat) || [],
     };
 
+    const videoFormat = info.chooseFormat({ format: "video", quality: "best" });
+    const videoUrl = await videoFormat.decipher(client.session.player);
+    (info as any).videoUrl = videoUrl;
+
     if (forceUrl || info.basic_info.is_live) {
       return {
         ...partialResult,
         stream: {
           type: "url",
-          url: info.basic_info.is_live ? info.streaming_data?.hls_manifest_url : format.decipher(client.session.player),
+          url: info.basic_info.is_live ? info.streaming_data?.hls_manifest_url : await format.decipher(client.session.player),
           userAgent: client.session.user_agent || SecondaryUserAgent,
           streamType: info.basic_info.is_live ? "m3u8" : isWebmOpus ? "webm/opus" : "unknown",
         } as UrlStreamInfo,
         cache: {
-          type: youtubei,
+          type: this.id,
           data: info,
         },
       };
     } else {
-      const readable: Readable = createFragmentalDownloadStream(format.decipher(client.session.player), {
+      const readable: Readable = createFragmentalDownloadStream(await format.decipher(client.session.player), {
         chunkSize: 8 * 1024 * 1024,
         contentLength: Number(format.content_length),
         pulseDownload: true,
@@ -150,7 +191,7 @@ export class youtubeiStrategy extends Strategy<youtubeiCache, YT.VideoInfo> {
             isWebmOpus ? "webm/opus" : "unknown",
         } as ReadableStreamInfo,
         cache: {
-          type: youtubei,
+          type: this.id,
           data: info,
         },
       };
@@ -175,4 +216,14 @@ export class youtubeiStrategy extends Strategy<youtubeiCache, YT.VideoInfo> {
   }
 }
 
-export default youtubeiStrategy;
+export function restoreYouTubeInfo(data: unknown): YT.VideoInfo | never {
+  if (!data || typeof data !== "object") {
+    throw new Error("Invalid data to restore YouTubeInfo");
+  }
+
+  if (Object.getPrototypeOf(data) === VideoInfo.prototype) {
+    return data as YT.VideoInfo;
+  }
+
+  return Object.assign(Object.create(VideoInfo.prototype), data);
+}
