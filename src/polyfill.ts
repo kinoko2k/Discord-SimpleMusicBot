@@ -100,9 +100,10 @@ if (typeof File === "undefined") {
   polyfillCount++;
 
   if (require("buffer").File) {
-    global.File = require("buffer").File;
+    (global as any).File = require("buffer").File;
   } else {
-    global.File = class File extends Blob {
+    class FilePolyfill extends Blob {
+      readonly [Symbol.toStringTag] = "File";
       name: string;
       lastModified: number;
 
@@ -112,7 +113,8 @@ if (typeof File === "undefined") {
         this.name = fileName;
         this.lastModified = options?.lastModified || Date.now();
       }
-    };
+    }
+    (global as any).File = FilePolyfill;
   }
 }
 
