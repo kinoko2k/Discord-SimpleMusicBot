@@ -1,4 +1,11 @@
-# Discord-SimpleMusicBot 
+# Discord-SimpleMusicBot
+
+## このフォークリポジトリについて
+
+このリポジトリは、開発者（@mtripg6666tdr）が制作しているDiscord-SimpleMusicBotを土台としてカスタマイズしているものです。
+
+GNU General Public License v3.0 に従っています。
+
 [![GitHub package.json dynamic](https://img.shields.io/github/package-json/version/mtripg6666tdr/Discord-SimpleMusicBot/master)](https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/blob/master/package.json)
 [![GitHub package.json dependency version (prod)](https://img.shields.io/badge/dynamic/json?color=blue&label=oceanic.js&query=%24.dependencies%5B%22oceanic.js%22%5D&url=https%3A%2F%2Fraw.githubusercontent.com%2Fmtripg6666tdr%2FDiscord-SimpleMusicBot%2Fmaster%2Fpackage.json)](https://github.com/OceanicJS/Oceanic)
 [![CI](https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/actions/workflows/test.yml/badge.svg)](https://github.com/mtripg6666tdr/Discord-SimpleMusicBot/actions/workflows/test.yml)
@@ -18,6 +25,7 @@ Discord向けの、シンプルな音楽ボット。YouTubeなどからの再生
 下部に掲載のサポートサーバーよりボットを試すことができます。お気軽にサポートサーバーにご参加ください。
 
 ## 特長
+
 - 🎵 できる限り高音質で再生
 - 🔎 URLやキーワードから検索して再生
   - YouTubeの動画のキーワード・リンク
@@ -37,10 +45,13 @@ Discord向けの、シンプルな音楽ボット。YouTubeなどからの再生
 - 👍 Botに関する[サポート](#サポート)(下記)
 
 ## ドキュメント・ガイド
-ボットの設定方法、コマンドなどはこちらからご覧になれます。  
+
+ボットの設定方法、コマンドなどはこちらからご覧になれます。
+
 - [ドキュメントサイト](https://web.usamyon.moe/Discord-SimpleMusicBot/)
 
 ## 貢献について
+
 常に開発中であるためバグが多々あると思います。そして、プロジェクトの性質上、時間とともに機能しなくなることもよくあります。
 
 また、開発者は最近ずっと多忙であるため、あまりメンテナンスに時間を割けていないのも実情です<!--[^1]-->。
@@ -59,33 +70,39 @@ Discord向けの、シンプルな音楽ボット。YouTubeなどからの再生
 なにとぞ、よろしくお願いいたします。
 
 ### バグのご報告について
+
 バグのご報告は、Issueや下記サポートサーバーのサポートチャンネルを通して受け付けております。
 ご報告あり次第、できる限り優先して対応いたします。
 
 ### 機能追加のご要望について
+
 機能追加のご要望も、Issue や下記のサポートサーバーを通して受け付けております。
 しかしながら、上の理由により実装時期が全く保証できない状況です。大変申し訳ございませんが、予めご了承ください。
 
 ## ローカライズについて
+
 プロジェクトでは、Crowdinで多言語化をしています。ボットの翻訳に協力してくださる方と、日本語か英語を話せる校正者の方を随時募集しています。  
 翻訳元の言語は日本語です。翻訳先の言語は以下の通りです。
-* アメリカ英語
-* イギリス英語(READMEは除く)
-* 繁体中文
-* フランス語
-* タイ語
-* トルコ語
+
+- アメリカ英語
+- イギリス英語(READMEは除く)
+- 繁体中文
+- フランス語
+- タイ語
+- トルコ語
 
 ここに掲載されていない言語であっても、翻訳を希望される場合はお気軽にお問い合わせください。
 
 [Crowdinのプロジェクトページ](https://crowdin.com/project/discord-simplemusicbot)
 
 ## サポート
+
 Discordにて、インストール等のサポート、およびアップデートのお知らせ等を行っています。  
 ボットを試すこともできますので、興味を持たれた方はぜひご参加ください。  
 [サポートサーバーへの参加はこちら](https://sr.usamyon.moe/8QZw)  
 [サポートされているバージョン](https://web.usamyon.moe/Discord-SimpleMusicBot/docs/next/setup/support)
 
 ## ライセンス
+
 GPLv3  
 詳細は[COPYING](COPYING)を参照。
