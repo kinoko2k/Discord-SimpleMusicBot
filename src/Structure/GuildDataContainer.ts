@@ -329,7 +329,6 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
     this.connectingVoiceChannel = targetChannel;
     if (this.connection === connection) return;
 
-
     const connectionLogger = getLogger("Connection", true);
     connectionLogger.addContext("id", this.getGuildId());
     connection.on("error", err => {
