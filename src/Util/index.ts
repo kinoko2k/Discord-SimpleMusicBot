@@ -545,7 +545,11 @@ export function requireIfAny(id: string): unknown {
   } catch (e) {
     const logger = getLogger("Util");
 
-    logger.info(`The module "${id}" couldn't be loaded because of the error: ${stringifyObject(e)}`);
+    if ((e as NodeJS.ErrnoException)?.code === "MODULE_NOT_FOUND") {
+      logger.debug(`Optional module "${id}" is not installed.`);
+    } else {
+      logger.info(`The module "${id}" couldn't be loaded because of the error: ${stringifyObject(e)}`);
+    }
 
     return null;
   }

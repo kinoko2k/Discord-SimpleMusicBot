@@ -80,7 +80,9 @@ export class MusicBot extends MusicBotBase {
 
     this._telemetry = process.env.DISABLE_TELEMETRY ? null : new Telemetry(this);
 
-    this.client.once("ready", eventHandlers.onReady.bind(this));
+    this.client
+      .once("ready", eventHandlers.onReady.bind(this))
+      .on("error", this.onError.bind(this));
     this.once("ready", () => {
       this.client
         .on("ready", eventHandlers.onReady.bind(this))
@@ -90,7 +92,6 @@ export class MusicBot extends MusicBotBase {
         .on("voiceChannelLeave", eventHandlers.onVoiceChannelLeave.bind(this))
         .on("voiceChannelSwitch", eventHandlers.onVoiceChannelSwitch.bind(this))
         .on("guildDelete", eventHandlers.onGuildDelete.bind(this))
-        .on("error", this.onError.bind(this))
       ;
     });
     if (config.debug) {

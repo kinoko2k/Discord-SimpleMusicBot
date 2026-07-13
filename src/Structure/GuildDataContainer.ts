@@ -329,18 +329,31 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
     this.connectingVoiceChannel = targetChannel;
     if (this.connection === connection) return;
 
-    await entersState(connection, VoiceConnectionStatus.Ready, 10e3);
 
     const connectionLogger = getLogger("Connection", true);
     connectionLogger.addContext("id", this.getGuildId());
     connection.on("error", err => {
       connectionLogger.error(err);
     });
-
-    this.connection = connection;
     if (config.debug) {
       connection.on("debug", connectionLogger.trace);
+      connection.on("stateChange", (_oldState, newState) => {
+        if (newState.status === VoiceConnectionStatus.Disconnected) {
+          const closeCode = "closeCode" in newState ? newState.closeCode : undefined;
+          connectionLogger.warn(`Voice connection disconnected: reason=${newState.reason}, closeCode=${closeCode}`);
+        }
+      });
     }
+    try {
+      await entersState(connection, VoiceConnectionStatus.Ready, 20e3);
+    } catch (er) {
+      connectionLogger.error(`Voice connection failed to enter Ready state within 20s. Current status: ${connection.state.status}`);
+      if (connection.state.status !== VoiceConnectionStatus.Destroyed) {
+        connection.destroy();
+      }
+      throw er;
+    }
+    this.connection = connection;
 
     // ニックネームの変更
     const guild = this.bot.client.guilds.get(this.getGuildId())!;
