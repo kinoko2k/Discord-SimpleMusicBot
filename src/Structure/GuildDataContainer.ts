@@ -329,12 +329,18 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
     if (!shoukaku) {
       throw new Error("Shoukaku instance is not available.");
     }
-    const player = await shoukaku.joinVoiceChannel({
-      guildId: this.getGuildId(),
-      channelId,
-      shardId: targetChannel.guild.shard.id,
-      deaf: true,
-    });
+    let player = shoukaku.players.get(this.getGuildId());
+    if (!player) {
+      if (shoukaku.connections.has(this.getGuildId())) {
+        await shoukaku.leaveVoiceChannel(this.getGuildId());
+      }
+      player = await shoukaku.joinVoiceChannel({
+        guildId: this.getGuildId(),
+        channelId,
+        shardId: targetChannel.guild.shard.id,
+        deaf: true,
+      });
+    }
     this.connectingVoiceChannel = targetChannel;
     this.shoukakuPlayer = player;
     this.connection = null;
@@ -383,10 +389,10 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
 
         if (targetVC.voiceMembers.has(this.bot.client.user.id)) {
           // すでにそのにVC入ってるよ～
-          if (this.connection) {
+          if (this.shoukakuPlayer || this.connection) {
             return true;
           }
-        } else if (this.connection && !message.member.permissions.has("MOVE_MEMBERS")) {
+        } else if ((this.shoukakuPlayer || this.connection) && !message.member.permissions.has("MOVE_MEMBERS")) {
           // すでになにかしらのVCに参加している場合
           const replyFailMessage = reply || replyOnFail
             ? message.reply.bind(message)
