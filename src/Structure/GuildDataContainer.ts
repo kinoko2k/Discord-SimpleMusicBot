@@ -29,7 +29,7 @@ import type { AnyTextableGuildChannel, Message, StageChannel, VoiceChannel } fro
 import type { TextChannel } from "oceanic.js";
 import type { Playlist } from "spotify-url-info";
 
-import { entersState, VoiceConnectionStatus } from "@discordjs/voice";
+import { entersState, joinVoiceChannel, VoiceConnectionStatus } from "@discordjs/voice";
 import { LockObj, lock } from "@mtripg6666tdr/async-lock";
 import { MessageEmbedBuilder } from "@mtripg6666tdr/oceanic-command-resolver/helper";
 import Soundcloud from "soundcloud.ts";
@@ -322,7 +322,10 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
    */
   async joinVoiceChannelOnly(channelId: string) {
     const targetChannel = this.bot.client.getChannel<VoiceChannel | StageChannel>(channelId)!;
-    const connection = targetChannel.join({
+    const connection = joinVoiceChannel({
+      channelId,
+      guildId: this.getGuildId(),
+      adapterCreator: targetChannel.guild.voiceAdapterCreator,
       selfDeaf: true,
       debug: config.debug,
     });
@@ -334,14 +337,15 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
     connection.on("error", err => {
       connectionLogger.error(err);
     });
+    connection.on("stateChange", (oldState, newState) => {
+      connectionLogger.debug(`Voice connection state change: ${oldState.status} -> ${newState.status}`);
+      if (newState.status === VoiceConnectionStatus.Disconnected) {
+        const closeCode = "closeCode" in newState ? newState.closeCode : undefined;
+        connectionLogger.warn(`Voice connection disconnected: reason=${newState.reason}, closeCode=${closeCode}`);
+      }
+    });
     if (config.debug) {
       connection.on("debug", connectionLogger.trace);
-      connection.on("stateChange", (_oldState, newState) => {
-        if (newState.status === VoiceConnectionStatus.Disconnected) {
-          const closeCode = "closeCode" in newState ? newState.closeCode : undefined;
-          connectionLogger.warn(`Voice connection disconnected: reason=${newState.reason}, closeCode=${closeCode}`);
-        }
-      });
     }
     try {
       await entersState(connection, VoiceConnectionStatus.Ready, 20e3);
