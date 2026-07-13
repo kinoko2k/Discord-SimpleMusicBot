@@ -90,6 +90,13 @@ export const ConfigSchema = Type.Object({
   djRoleNames: Type.Optional(Type.Array(Type.String(), { default: ["DJ"] })),
 
   showGuildCountStatus: Type.Optional(Type.Boolean({ default: false })),
+
+  lavalink: Type.Optional(Type.Object({
+    host: Type.String({ default: "localhost" }),
+    port: Type.Number({ default: 2333 }),
+    password: Type.String({ default: "yoursecret" }),
+    secure: Type.Optional(Type.Boolean({ default: false })),
+  })),
 });
 
 export type GuildBGMContainerType = Static<typeof GuildBGMContainer>;

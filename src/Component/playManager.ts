@@ -121,6 +121,9 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
    *  接続され、再生途中にあるか（たとえ一時停止されていても）
    */
   get isPlaying(): boolean {
+    if (this.server.shoukakuPlayer) {
+      return this._playing;
+    }
     return this.isConnecting
       && !!this._player
       && (this._player.state.status === AudioPlayerStatus.Playing || this._player.state.status === AudioPlayerStatus.Paused || !!this._waitForLiveAbortController);
@@ -130,13 +133,16 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
    *  VCに接続中かどうか
    */
   get isConnecting(): boolean {
-    return !!this.server.connection && this.server.connection.state.status === VoiceConnectionStatus.Ready;
+    return !!this.server.shoukakuPlayer || (!!this.server.connection && this.server.connection.state.status === VoiceConnectionStatus.Ready);
   }
 
   /**
    * 一時停止されているか
    */
   get isPaused(): boolean {
+    if (this.server.shoukakuPlayer) {
+      return this.server.shoukakuPlayer.paused;
+    }
     return this.isConnecting && !!this._player && this._player.state.status === AudioPlayerStatus.Paused;
   }
 
@@ -145,6 +151,9 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
    * @remarks ミリ秒単位なので秒に直すには1000分の一する必要がある
    */
   get currentTime(): number {
+    if (this.server.shoukakuPlayer) {
+      return this.server.shoukakuPlayer.position || 0;
+    }
     if (!this.isPlaying || this._player!.state.status === AudioPlayerStatus.Idle || this._player!.state.status === AudioPlayerStatus.Buffering) {
       return 0;
     }
@@ -172,6 +181,10 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
 
   setVolume(val: number) {
     this._volume = val;
+    if (this.server.shoukakuPlayer) {
+      this.server.shoukakuPlayer.setGlobalVolume(val);
+      return true;
+    }
     if (this._resource?.volumeTransformer) {
       this._resource.volumeTransformer.setVolumeLogarithmic(val / 100);
       return true;
@@ -282,96 +295,121 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
       if (this.currentAudioInfo!.lengthSeconds <= time) time = 0;
       this._seek = time;
 
-      // QueueContentからストリーム情報を取得
-      const rawStream = time > 0
-        ? await this.currentAudioInfo!.fetch(true)
-        : this._errorUrl !== this._currentAudioInfo!.url && this.server.bot.cache.audioBinary.has(this.currentAudioInfo!.url)
-          ? (await this.server.bot.cache.audioBinary.get(this.currentAudioInfo!.url))!
-          : this.server.bot.cache.audioBinary.teeStream(
-            this.currentAudioInfo!.url,
-            await this.currentAudioInfo!.fetch(false),
-          );
-
-      // 情報からストリームを作成
-      // 万一ストリームのfetch中に切断された場合には、リソース開放してplayを抜ける
-      const voiceChannel = this.server.connectingVoiceChannel;
-      if (!voiceChannel) {
-        if (rawStream.type === "readable") {
-          rawStream.stream.once("error", () => {});
-          rawStream.stream.destroy();
+      if (this.server.shoukakuPlayer) {
+        const res = await this.server.shoukakuPlayer.node.rest.resolve(this.currentAudioInfo!.url);
+        if (!res || !res.data) {
+          throw new Error("Lavalink failed to resolve track: " + this.currentAudioInfo!.url);
         }
-        return this;
-      }
-      const { stream, streamType, cost, streams } = await resolveStreamToPlayable(rawStream, {
-        effects: this.server.audioEffects.export(),
-        seek: this._seek,
-        volumeTransformEnabled: this.volume !== 100,
-        bitrate: voiceChannel.bitrate,
-      });
-      this._currentAudioStream = stream;
-
-      // ログ
-      if (process.env.DSL_ENABLE) {
-        this._dsLogger = new DSL({ enableFileLog: true });
-        this._dsLogger.appendReadable(...streams);
-      }
-
-      // 各種準備
-      this._cost = cost;
-      this._lastMember = null;
-      this.prepareAudioPlayer();
-
-      const normalizer = new Normalizer(stream, this.volume !== 100);
-      normalizer.once("end", this.onStreamFinished.bind(this));
-      const resource = this._resource = FixedAudioResource.fromAudioResource(
-        createAudioResource(normalizer, {
-          inputType:
-            streamType === "webm/opus"
-              ? StreamType.WebmOpus
-              : streamType === "ogg/opus"
-                ? StreamType.OggOpus
-                : streamType === "raw"
-                  ? StreamType.Raw
-                  : streamType === "opus"
-                    ? StreamType.Opus
-                    : StreamType.Arbitrary,
-          inlineVolume: this.volume !== 100,
-        }),
-        this.currentAudioInfo!.lengthSeconds - time,
-      );
-      this._dsLogger?.appendReadable(normalizer);
-
-      // start to play!
-      this._player!.play(resource);
-
-      // setup volume
-      this.setVolume(this.volume);
-
-      // wait for player entering the playing state
-      const waitingSucceeded = await entersState(this._player!, AudioPlayerStatus.Playing, 30e3)
-        .then(() => true)
-        .catch(() => false);
-
-      if (this._player?.state.status === AudioPlayerStatus.Buffering) {
-        throw new Error("Resource timeout exceeded.");
-      }
-
-      // when occurring one or more error(s) while waiting for player,
-      // the error(s) should be also emitted from AudioPlayer and handled by PlayManager#handleError
-      // so simply ignore the error(s) here.
-      if (!waitingSucceeded) {
-        if (message instanceof DeferredMessage) {
-          message.cancelSchedule();
+        const track = "encoded" in res.data ? res.data.encoded : (Array.isArray(res.data) ? res.data[0]?.encoded : null);
+        if (!track) {
+          throw new Error("No encoded track found from Lavalink.");
         }
 
-        return this;
+        await this.server.shoukakuPlayer.playTrack({ track: { encoded: track } });
+
+        this.server.shoukakuPlayer.once("end", () => {
+          this.onStreamFinished().catch(this.logger.error);
+        });
+        this.server.shoukakuPlayer.once("exception", (err: any) => {
+          this.handleError(err).catch(this.logger.error);
+        });
+
+        this.preparing = false;
+        this._playing = true;
+        this.emit("playStarted");
+        this.logger.info("Lavalink Playback started successfully");
+      } else {
+        // QueueContentからストリーム情報を取得
+        const rawStream = time > 0
+          ? await this.currentAudioInfo!.fetch(true)
+          : this._errorUrl !== this._currentAudioInfo!.url && this.server.bot.cache.audioBinary.has(this.currentAudioInfo!.url)
+            ? (await this.server.bot.cache.audioBinary.get(this.currentAudioInfo!.url))!
+            : this.server.bot.cache.audioBinary.teeStream(
+              this.currentAudioInfo!.url,
+              await this.currentAudioInfo!.fetch(false),
+            );
+
+        // 情報からストリームを作成
+        // 万一ストリームのfetch中に切断された場合には、リソース開放してplayを抜ける
+        const voiceChannel = this.server.connectingVoiceChannel;
+        if (!voiceChannel) {
+          if (rawStream.type === "readable") {
+            rawStream.stream.once("error", () => {});
+            rawStream.stream.destroy();
+          }
+          return this;
+        }
+        const { stream, streamType, cost, streams } = await resolveStreamToPlayable(rawStream, {
+          effects: this.server.audioEffects.export(),
+          seek: this._seek,
+          volumeTransformEnabled: this.volume !== 100,
+          bitrate: voiceChannel.bitrate,
+        });
+        this._currentAudioStream = stream;
+
+        // ログ
+        if (process.env.DSL_ENABLE) {
+          this._dsLogger = new DSL({ enableFileLog: true });
+          this._dsLogger.appendReadable(...streams);
+        }
+
+        // 各種準備
+        this._cost = cost;
+        this._lastMember = null;
+        this.prepareAudioPlayer();
+
+        const normalizer = new Normalizer(stream, this.volume !== 100);
+        normalizer.once("end", this.onStreamFinished.bind(this));
+        const resource = this._resource = FixedAudioResource.fromAudioResource(
+          createAudioResource(normalizer, {
+            inputType:
+              streamType === "webm/opus"
+                ? StreamType.WebmOpus
+                : streamType === "ogg/opus"
+                  ? StreamType.OggOpus
+                  : streamType === "raw"
+                    ? StreamType.Raw
+                    : streamType === "opus"
+                      ? StreamType.Opus
+                      : StreamType.Arbitrary,
+            inlineVolume: this.volume !== 100,
+          }),
+          this.currentAudioInfo!.lengthSeconds - time,
+        );
+        this._dsLogger?.appendReadable(normalizer);
+
+        // start to play!
+        this._player!.play(resource);
+
+        // setup volume
+        this.setVolume(this.volume);
+
+        // wait for player entering the playing state
+        const waitingSucceeded = await entersState(this._player!, AudioPlayerStatus.Playing, 30e3)
+          .then(() => true)
+          .catch(() => false);
+
+        if (this._player?.state.status === AudioPlayerStatus.Buffering) {
+          throw new Error("Resource timeout exceeded.");
+        }
+
+        // when occurring one or more error(s) while waiting for player,
+        // the error(s) should be also emitted from AudioPlayer and handled by PlayManager#handleError
+        // so simply ignore the error(s) here.
+        if (!waitingSucceeded) {
+          if (message instanceof DeferredMessage) {
+            message.cancelSchedule();
+          }
+
+          return this;
+        }
+
+        this.preparing = false;
+        this._playing = true;
+        this.emit("playStarted");
+
+        this.logger.info("Playback started successfully");
       }
-
-      this.preparing = false;
-      this._playing = true;
-      this.emit("playStarted");
-
-      this.logger.info("Playback started successfully");
 
       // 現在再生中パネルを送信していい環境な場合に以下のブロックを実行する
       if (message) {
@@ -623,9 +661,11 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
   async stop({ force = false, wait = false }: { force?: boolean, wait?: boolean } = {}): Promise<PlayManager> {
     this.logger.info("Stop called");
     this._playing = false;
-    if (this.server.connection) {
+    if (this.server.shoukakuPlayer || this.server.connection) {
       this._cost = 0;
-      if (this._player) {
+      if (this.server.shoukakuPlayer) {
+        await this.server.shoukakuPlayer.stopTrack();
+      } else if (this._player) {
         this._player.unpause();
         this._player.stop(force);
         if (wait) {
@@ -648,10 +688,17 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
     await this.stop({ force: true });
     this.emit("disconnectAttempt");
 
-    if (this.server.connection) {
-      this.logger.info("Disconnected from " + this.server.connectingVoiceChannel!.id);
-      this.server.connection.disconnect();
-      this.server.connection.destroy();
+    if (this.server.shoukakuPlayer || this.server.connection) {
+      this.logger.info("Disconnected from " + this.server.connectingVoiceChannel?.id);
+      if (this.server.shoukakuPlayer) {
+        const shoukaku = (this.server.bot as import("../bot").MusicBot).shoukaku;
+        await shoukaku?.leaveVoiceChannel(this.server.getGuildId());
+        this.server.shoukakuPlayer = null;
+      }
+      if (this.server.connection) {
+        this.server.connection.disconnect();
+        this.server.connection.destroy();
+      }
       this.emit("disconnect");
     } else {
       this.logger.warn("Disconnect called but no connection");
@@ -703,7 +750,11 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
   pause(lastMember?: Member): PlayManager {
     this.logger.info("Pause called");
     this.emit("pause");
-    this._player!.pause();
+    if (this.server.shoukakuPlayer) {
+      this.server.shoukakuPlayer.setPaused(true);
+    } else if (this._player) {
+      this._player.pause();
+    }
     this._lastMember = lastMember?.id || null;
     return this;
   }
@@ -716,7 +767,11 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
     this.logger.info("Resume called");
     this.emit("resume");
     if (!member || member.id === this._lastMember) {
-      this._player!.unpause();
+      if (this.server.shoukakuPlayer) {
+        this.server.shoukakuPlayer.setPaused(false);
+      } else if (this._player) {
+        this._player.unpause();
+      }
       this._lastMember = null;
     }
     return this;

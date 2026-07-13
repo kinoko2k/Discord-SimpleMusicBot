@@ -41,6 +41,7 @@
     "p-queue": "^6.6.2",
     "prism-media": "^1.3.5",
     "safe-traverse": "^0.2.1",
+    "shoukaku": "^4.1.1",
     "soundcloud.ts": "^0.5.2",
     "spotify-url-info": "^3.2.18",
     "throttle-debounce": "^5.0.2",

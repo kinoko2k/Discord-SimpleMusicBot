@@ -20,6 +20,7 @@ import type { CommandArgs } from "./Structure";
 
 import i18next from "i18next";
 import * as discord from "oceanic.js";
+import { Connectors, Shoukaku } from "shoukaku";
 
 import { Telemetry } from "./Component/telemetry";
 import { requireIfAny } from "./Util";
@@ -35,6 +36,7 @@ const config = getConfig();
 export class MusicBot extends MusicBotBase {
   // クライアントの初期化
   protected readonly _client: discord.Client;
+  public readonly shoukaku: Shoukaku;
   // eslint-disable-next-line @typescript-eslint/prefer-readonly
   private _isReadyFinished = false;
 
@@ -79,6 +81,27 @@ export class MusicBot extends MusicBotBase {
     });
 
     this._telemetry = process.env.DISABLE_TELEMETRY ? null : new Telemetry(this);
+
+    const lavalinkConfig = config.lavalink || {
+      host: process.env.LAVALINK_HOST || "localhost",
+      port: Number(process.env.LAVALINK_PORT) || 2333,
+      password: process.env.LAVALINK_PASSWORD || "yoursecret",
+      secure: process.env.LAVALINK_SECURE === "true",
+    };
+
+    this.shoukaku = new Shoukaku(
+      new Connectors.OceanicJS(this._client),
+      [{
+        name: "Primary-Node",
+        url: `${lavalinkConfig.host}:${lavalinkConfig.port}`,
+        auth: lavalinkConfig.password,
+        secure: lavalinkConfig.secure,
+      }],
+      { moveOnDisconnect: false, resume: true }
+    );
+
+    this.shoukaku.on("error", (name, error) => this.logger.error(`Lavalink Node ${name} error:`, error));
+    this.shoukaku.on("ready", (name) => this.logger.info(`Lavalink Node ${name} ready.`));
 
     this.client
       .once("ready", eventHandlers.onReady.bind(this))

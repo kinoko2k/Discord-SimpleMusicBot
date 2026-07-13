@@ -32,6 +32,7 @@ import type { Playlist } from "spotify-url-info";
 import { entersState, joinVoiceChannel, VoiceConnectionStatus } from "@discordjs/voice";
 import { LockObj, lock } from "@mtripg6666tdr/async-lock";
 import { MessageEmbedBuilder } from "@mtripg6666tdr/oceanic-command-resolver/helper";
+import type { Player } from "shoukaku";
 import Soundcloud from "soundcloud.ts";
 
 import { LogEmitter } from "./LogEmitter";
@@ -128,6 +129,8 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
   connection: VoiceConnection | null;
   /** VC */
   connectingVoiceChannel: VoiceChannel | StageChannel | null;
+  /** Shoukaku Lavalink プレーヤー */
+  shoukakuPlayer: Player | null = null;
 
   get locale() {
     const guild = this.bot.client.guilds.get(this.getGuildId())!;
@@ -322,41 +325,19 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
    */
   async joinVoiceChannelOnly(channelId: string) {
     const targetChannel = this.bot.client.getChannel<VoiceChannel | StageChannel>(channelId)!;
-    const connection = joinVoiceChannel({
-      channelId,
+    const shoukaku = (this.bot as import("../bot").MusicBot).shoukaku;
+    if (!shoukaku) {
+      throw new Error("Shoukaku instance is not available.");
+    }
+    const player = await shoukaku.joinVoiceChannel({
       guildId: this.getGuildId(),
-      adapterCreator: targetChannel.guild.voiceAdapterCreator,
-      selfDeaf: true,
-      debug: config.debug,
+      channelId,
+      shardId: targetChannel.guild.shard.id,
+      deaf: true,
     });
     this.connectingVoiceChannel = targetChannel;
-    if (this.connection === connection) return;
-
-    const connectionLogger = getLogger("Connection", true);
-    connectionLogger.addContext("id", this.getGuildId());
-    connection.on("error", err => {
-      connectionLogger.error(err);
-    });
-    connection.on("stateChange", (oldState, newState) => {
-      connectionLogger.debug(`Voice connection state change: ${oldState.status} -> ${newState.status}`);
-      if (newState.status === VoiceConnectionStatus.Disconnected) {
-        const closeCode = "closeCode" in newState ? newState.closeCode : undefined;
-        connectionLogger.warn(`Voice connection disconnected: reason=${newState.reason}, closeCode=${closeCode}`);
-      }
-    });
-    if (config.debug) {
-      connection.on("debug", connectionLogger.trace);
-    }
-    try {
-      await entersState(connection, VoiceConnectionStatus.Ready, 20e3);
-    } catch (er) {
-      connectionLogger.error(`Voice connection failed to enter Ready state within 20s. Current status: ${connection.state.status}`);
-      if (connection.state.status !== VoiceConnectionStatus.Destroyed) {
-        connection.destroy();
-      }
-      throw er;
-    }
-    this.connection = connection;
+    this.shoukakuPlayer = player;
+    this.connection = null;
 
     // ニックネームの変更
     const guild = this.bot.client.guilds.get(this.getGuildId())!;
@@ -371,7 +352,7 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
         nick: nickname,
       }).catch(this.logger.error);
       // ニックネームを元に戻すやつ
-      connection.once(VoiceConnectionStatus.Destroyed, () => {
+      player.on("closed", () => {
         nickname = nickname!.replace("🈵", "🈳").replace("▶", stopButton);
         guild.editCurrentMember({
           nick: nickname,
