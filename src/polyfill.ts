@@ -22,15 +22,6 @@ const logger = getLogger("Polyfill");
 
 let polyfillCount = 0;
 
-if (typeof global.fetch === "undefined") {
-  logger.warn("Native fetch function is not defined.");
-  logger.warn("Installing a fetch polyfill.");
-
-  polyfillCount++;
-
-  global.fetch = require("undici").fetch;
-}
-
 if (typeof global.Blob === "undefined") {
   logger.warn("Native Blob class is not defined.");
   logger.warn("Setting up Blob object imported from buffer standard module.");
@@ -38,6 +29,50 @@ if (typeof global.Blob === "undefined") {
   polyfillCount++;
 
   global.Blob = require("buffer").Blob;
+}
+
+if (typeof File === "undefined") {
+  logger.warn("Native File class is not defined.");
+  logger.warn("Installing a File polyfill.");
+
+  polyfillCount++;
+
+  if (require("buffer").File) {
+    (global as any).File = require("buffer").File;
+  } else {
+    class FilePolyfill extends Blob {
+      readonly [Symbol.toStringTag] = "File";
+      name: string;
+      lastModified: number;
+
+      constructor(sources: any, fileName: string, options?: any) {
+        super(sources, options);
+
+        this.name = fileName;
+        this.lastModified = options?.lastModified || Date.now();
+      }
+    }
+    (global as any).File = FilePolyfill;
+  }
+}
+
+if (typeof global.ReadableStream === "undefined") {
+  logger.warn("Native ReadableStream class is not globally defined.");
+  logger.warn("Setting up ReadableStream object imported from stream/web standard module.");
+
+  polyfillCount++;
+
+  const webStreams = require("stream/web");
+  global.ReadableStream = webStreams.ReadableStream;
+  (global as any).WritableStream = webStreams.WritableStream;
+  (global as any).TransformStream = webStreams.TransformStream;
+}
+
+if (typeof (global as any).MessagePort === "undefined") {
+  const workerThreads = require("worker_threads");
+  if (workerThreads.MessagePort) {
+    (global as any).MessagePort = workerThreads.MessagePort;
+  }
 }
 
 if (typeof global.DOMException === "undefined") {
@@ -67,15 +102,6 @@ if (typeof global.structuredClone === "undefined") {
   };
 }
 
-if (typeof global.ReadableStream === "undefined") {
-  logger.warn("Native ReadableStream class is not globally defined.");
-  logger.warn("Setting up ReadableStream object imported from stream/web standard module.");
-
-  polyfillCount++;
-
-  global.ReadableStream = require("stream/web").ReadableStream;
-}
-
 if (typeof Array.prototype.findLastIndex === "undefined") {
   logger.warn("Native Array.prototype.findLastIndex function is not defined.");
   logger.warn("Installing a findLastIndex polyfill.");
@@ -93,29 +119,13 @@ if (typeof Array.prototype.findLastIndex === "undefined") {
   };
 }
 
-if (typeof File === "undefined") {
-  logger.warn("Native File class is not defined.");
-  logger.warn("Installing a File polyfill.");
+if (typeof global.fetch === "undefined") {
+  logger.warn("Native fetch function is not defined.");
+  logger.warn("Installing a fetch polyfill.");
 
   polyfillCount++;
 
-  if (require("buffer").File) {
-    (global as any).File = require("buffer").File;
-  } else {
-    class FilePolyfill extends Blob {
-      readonly [Symbol.toStringTag] = "File";
-      name: string;
-      lastModified: number;
-
-      constructor(sources: any, fileName: string, options?: any) {
-        super(sources, options);
-
-        this.name = fileName;
-        this.lastModified = options?.lastModified || Date.now();
-      }
-    }
-    (global as any).File = FilePolyfill;
-  }
+  global.fetch = require("undici").fetch;
 }
 
 if (polyfillCount > 0) {
