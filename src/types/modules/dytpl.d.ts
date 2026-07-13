@@ -17,14 +17,44 @@
  */
 
 // This type declaration is just for building on Node.js v16.x
-// @distube/ytsr has been dropped its support for v16.x or lower.
-// Building with Node.js v18+, the type definition packed in @distube/ytsr should take priority over below stub types.
+// @distube/ytpl has dropped its support for v16.x or lower.
+// Building with Node.js v18+, the type definition packed in @distube/ytpl should take priority over below stub types.
 // This file should be removed when dropping the Node.js v16 support.
-declare module "@distube/ytsr" {
-  namespace _EXPORT {
-    type Video = any;
-    type VideoResult = any;
+declare module "@distube/ytpl" {
+  namespace ytpl {
+    interface result {
+      id: string;
+      url: string;
+      title: string;
+      visibility: "link only" | "everyone";
+      description: string | null;
+      total_items: number;
+      views: string;
+      last_updated: string;
+      author: null | {
+        id: string,
+        name: string,
+        avatar: string,
+        user: string | null,
+        channel_url: string,
+        user_url: string | null,
+      };
+      items: {
+        id: string,
+        url: string,
+        url_simple: string,
+        title: string,
+        thumbnail: string,
+        duration: string | null,
+        author: null | {
+          name: string,
+          ref: string,
+        },
+      }[];
+    }
   }
-  declare function _EXPORT(...args: any[]): any;
-  export = _EXPORT;
+
+  function ytpl(id: string, options?: any): Promise<ytpl.result>;
+
+  export = ytpl;
 }
