@@ -36,6 +36,7 @@ export * as color from "./color";
 export * as discordUtil from "./discord";
 export * as system from "./system";
 export * as time from "./time";
+export * as voiceAdapter from "./voiceAdapter";
 
 /**
  * オブジェクトを可能な限り文字列化します

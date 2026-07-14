@@ -38,6 +38,7 @@ import Soundcloud from "soundcloud.ts";
 import { LogEmitter } from "./LogEmitter";
 import { Spotify } from "../AudioSource";
 import { SoundCloudS } from "../AudioSource";
+import { createOceanicVoiceAdapter } from "../Util/voiceAdapter";
 import { Playlist as ytpl } from "../AudioSource/youtube/playlist";
 import { getCommandExecutionContext } from "../Commands";
 import { AudioEffectManager } from "../Component/audioEffectManager";
@@ -326,24 +327,67 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
   async joinVoiceChannelOnly(channelId: string) {
     const targetChannel = this.bot.client.getChannel<VoiceChannel | StageChannel>(channelId)!;
     const shoukaku = (this.bot as import("../bot").MusicBot).shoukaku;
-    if (!shoukaku) {
-      throw new Error("Shoukaku instance is not available.");
-    }
-    let player = shoukaku.players.get(this.getGuildId());
-    if (!player) {
-      if (shoukaku.connections.has(this.getGuildId())) {
-        await shoukaku.leaveVoiceChannel(this.getGuildId());
+    if (shoukaku && !config.lavalink?.disabled) {
+      let player = shoukaku.players.get(this.getGuildId());
+      if (!player) {
+        if (shoukaku.connections.has(this.getGuildId())) {
+          await shoukaku.leaveVoiceChannel(this.getGuildId());
+        }
+        player = await shoukaku.joinVoiceChannel({
+          guildId: this.getGuildId(),
+          channelId,
+          shardId: targetChannel.guild.shard.id,
+          deaf: true,
+        });
       }
-      player = await shoukaku.joinVoiceChannel({
-        guildId: this.getGuildId(),
-        channelId,
-        shardId: targetChannel.guild.shard.id,
-        deaf: true,
+      this.connectingVoiceChannel = targetChannel;
+      this.shoukakuPlayer = player;
+      this.connection = null;
+    } else {
+      if (this.shoukakuPlayer && shoukaku) {
+        await shoukaku.leaveVoiceChannel(this.getGuildId()).catch(() => {});
+        this.shoukakuPlayer = null;
+      }
+      let connection = this.connection;
+      if (!connection || connection.state.status === VoiceConnectionStatus.Destroyed) {
+        connection = joinVoiceChannel({
+          channelId: targetChannel.id,
+          guildId: this.getGuildId(),
+          adapterCreator: createOceanicVoiceAdapter(targetChannel.guild),
+          selfDeaf: true,
+        });
+      } else if (connection.joinConfig.channelId !== targetChannel.id) {
+        connection = joinVoiceChannel({
+          channelId: targetChannel.id,
+          guildId: this.getGuildId(),
+          adapterCreator: createOceanicVoiceAdapter(targetChannel.guild),
+          selfDeaf: true,
+        });
+      }
+      if (!this.connection || this.connection !== connection) {
+        connection.on("error", (err) => {
+          this.logger.error("VoiceConnection error:", err);
+        });
+        connection.on(VoiceConnectionStatus.Disconnected, async () => {
+          try {
+            await Promise.race([
+              entersState(connection!, VoiceConnectionStatus.Signalling, 5000),
+              entersState(connection!, VoiceConnectionStatus.Connecting, 5000),
+            ]);
+          } catch {
+            if (connection?.state.status !== VoiceConnectionStatus.Destroyed) {
+              connection?.destroy();
+            }
+          }
+        });
+      }
+      this.connectingVoiceChannel = targetChannel;
+      this.shoukakuPlayer = null;
+      this.connection = connection;
+      await entersState(connection, VoiceConnectionStatus.Ready, 20e3).catch((err) => {
+        this.logger.warn("Voice connection didn't enter Ready state within 20s:", err);
       });
     }
-    this.connectingVoiceChannel = targetChannel;
-    this.shoukakuPlayer = player;
-    this.connection = null;
 
     // ニックネームの変更
     const guild = this.bot.client.guilds.get(this.getGuildId())!;
@@ -358,12 +402,22 @@ export class GuildDataContainer extends LogEmitter<GuildDataContainerEvents> {
         nick: nickname,
       }).catch(this.logger.error);
       // ニックネームを元に戻すやつ
-      player.on("closed", () => {
+      let restored = false;
+      const restoreNickname = () => {
+        if (restored) return;
+        restored = true;
         nickname = nickname!.replace("🈵", "🈳").replace("▶", stopButton);
         guild.editCurrentMember({
           nick: nickname,
         }).catch(this.logger.error);
-      });
+      };
+
+      if (this.shoukakuPlayer) {
+        this.shoukakuPlayer.once("closed", restoreNickname);
+      } else if (this.connection) {
+        this.connection.once(VoiceConnectionStatus.Destroyed, restoreNickname);
+      }
+      this.player.once("disconnect", restoreNickname);
     }
 
     this.logger.info(`Connected to ${channelId}`);

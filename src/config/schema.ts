@@ -96,6 +96,7 @@ export const ConfigSchema = Type.Object({
     port: Type.Number({ default: 2333 }),
     password: Type.String({ default: "yoursecret" }),
     secure: Type.Optional(Type.Boolean({ default: false })),
+    disabled: Type.Optional(Type.Boolean({ default: false })),
   })),
 });
 
