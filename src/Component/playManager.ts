@@ -297,10 +297,30 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
 
       if (this.server.shoukakuPlayer) {
         const res = await this.server.shoukakuPlayer.node.rest.resolve(this.currentAudioInfo!.url);
-        if (!res || !res.data) {
-          throw new Error("Lavalink failed to resolve track: " + this.currentAudioInfo!.url);
+        let track: string | null = null;
+        if (res && res.loadType === "track") {
+          track = res.data.encoded;
+        } else if (res && res.loadType === "playlist") {
+          track = res.data.tracks[0]?.encoded ?? null;
+        } else if (res && res.loadType === "search") {
+          track = res.data[0]?.encoded ?? null;
+        } else if (res && res.loadType === "error") {
+          throw new Error("Lavalink error: " + (res.data.message || "Unknown error"));
         }
-        const track = "encoded" in res.data ? res.data.encoded : (Array.isArray(res.data) ? res.data[0]?.encoded : null);
+
+        if (!track && this.currentAudioInfo?.title) {
+          const author = "author" in this.currentAudioInfo && typeof this.currentAudioInfo.author === "string"
+            ? this.currentAudioInfo.author
+            : "channelName" in this.currentAudioInfo && typeof this.currentAudioInfo.channelName === "string"
+              ? this.currentAudioInfo.channelName
+              : "";
+          const query = `ytsearch:${this.currentAudioInfo.title} ${author}`.trim();
+          const searchRes = await this.server.shoukakuPlayer.node.rest.resolve(query);
+          if (searchRes && searchRes.loadType === "search" && searchRes.data.length > 0) {
+            track = searchRes.data[0].encoded;
+          }
+        }
+
         if (!track) {
           throw new Error("No encoded track found from Lavalink.");
         }
