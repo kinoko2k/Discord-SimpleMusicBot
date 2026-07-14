@@ -981,6 +981,10 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
       if (this.server.queue.loopEnabled) this.server.queue.loopEnabled = false;
       if (this.server.queue.length === 1 && this.server.queue.queueLoopEnabled) this.server.queue.queueLoopEnabled = false;
       await this.server.queue.next();
+      if (this.server.queue.isEmpty) {
+        await this.onQueueEmpty();
+        return;
+      }
     }
     await this.play({ quiet: quiet });
   }
