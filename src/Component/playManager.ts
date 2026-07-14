@@ -298,6 +298,7 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
       if (this.server.shoukakuPlayer) {
         const res = await this.server.shoukakuPlayer.node.rest.resolve(this.currentAudioInfo!.url);
         let track: string | null = null;
+        let lavalinkError: string | null = null;
         if (res && res.loadType === "track") {
           track = res.data.encoded;
         } else if (res && res.loadType === "playlist") {
@@ -305,7 +306,7 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
         } else if (res && res.loadType === "search") {
           track = res.data[0]?.encoded ?? null;
         } else if (res && res.loadType === "error") {
-          throw new Error("Lavalink error: " + (res.data.message || "Unknown error"));
+          lavalinkError = res.data.message || "Unknown error";
         }
 
         if (!track && this.currentAudioInfo?.title) {
@@ -318,10 +319,15 @@ export class PlayManager extends ServerManagerBase<PlayManagerEvents> {
           const searchRes = await this.server.shoukakuPlayer.node.rest.resolve(query);
           if (searchRes && searchRes.loadType === "search" && searchRes.data.length > 0) {
             track = searchRes.data[0].encoded;
+          } else if (searchRes && searchRes.loadType === "error" && !lavalinkError) {
+            lavalinkError = searchRes.data.message || "Unknown error";
           }
         }
 
         if (!track) {
+          if (lavalinkError) {
+            throw new Error("Lavalink error: " + lavalinkError);
+          }
           throw new Error("No encoded track found from Lavalink.");
         }
 
